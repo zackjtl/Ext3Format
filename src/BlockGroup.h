@@ -4,42 +4,60 @@
 #include "Tables.h"
 #include "Ext2Params.h"
 #include "BitArray.h"
+#include "BlockManager.h"
 #include <string>
-
-using namespace std;
+#include <vector>
 
 class CBlockGroup
 {
 public:
-  CBlockGroup(uint32 StartBlock, uint32 BlockCount, CExt2Params& Ext2Params, bool HaveSuperBlockBackup);
+  CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, CBlockManager& BlockMan);
   ~CBlockGroup();
 
-  TGroupDesc& GetDescriptor() { return _Desc; }
-  CBitArray& GetBlockBmp()    { return _BlockBmp; }
-  CBitArray& GetInodeBmp()    { return _InodeBmp; }
+  TGroupDesc& GetDescriptor() { return Desc; }
+  
+  void OccupyFileSystemBlocks();
+
+  uint GetStartInodeIndex();  
 
   /* Acquire inode from this group */
-  void AllocateInode();
+  bool HaveFreeInode();
+  uint32 AllocateNewInode();
 
-  /* Acquire blocks from this group */
-  void AllocateBlock(uint32 Count);
+  void CreateRsvdGdtBlockData();
+
+public:
+  TGroupDesc      Desc;
+
+public:
+  static bool bg_has_super(TSuperBlock& Super, uint32 GroupIndex);
 
 private:
   
   /* Initial descriptor and bitmaps */
-  void InitialByExt2Params(CExt2Params& Ext2Params);
+  void Initial();
 
 private:
+  uint32        _Index;
   uint32        _StartBlock;
   uint32        _BlockCount;
-  TSuperBlock   _SuperBlock;
+  TSuperBlock&  _Super;
+  CExt2Params&  _Params;
   bool          _HaveSuperBlockBackup;
+  CBlockManager& _BlockMan;  
+  uint32        _FsBlocks;
 
-  TGroupDesc    _Desc;    
+  uint32        _BlockBmpBlocks;
+  uint32        _InodeBmpBlocks;
+  uint32        _InodeTableBlocks;
 
-  CBitArray     _BlockBmp;
-  CBitArray     _InodeBmp;
-  
+  /* The offset block of reserved gdt block */
+  uint32        _RsvdGdtBlockOffset;  
+
+  std::vector<byte>   _InodeBmp;
 };
+
+static int test_root(uint32 a, uint32 b);
+
 
 #endif

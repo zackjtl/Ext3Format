@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-#include "Pch.h"
+////#include "Pch.h"
 #pragma hdrstop
 //---------------------------------------------------------------------------
 #include "KeyValuePrinter.h"
@@ -55,6 +55,20 @@ wstring CKeyValuePrinter::print(wstring Name, wstring Value)
 
 	wstring spaces(gap, L' ');
 	wstring text = Name + spaces + L" = " + Value;
+
+	if (_IniFormat) {
+		text += L";";
+	}
+
+	return text.c_str();
+}
+//---------------------------------------------------------------------------
+wstring CKeyValuePrinter::print(wstring Name, string Value)
+{
+	uint gap = _key_length - Name.length() - 1;
+
+	wstring spaces(gap, L' ');
+	wstring text = Name + spaces + L" = " + ToWideString(Value);
 
 	if (_IniFormat) {
 		text += L";";

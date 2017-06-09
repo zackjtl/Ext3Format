@@ -1,4 +1,4 @@
-#include "Pch.h"
+////#include "Pch.h"
 #pragma hdrstop
 //---------------------------------------------------------------------------
 #include <sstream>
@@ -6,8 +6,13 @@
 #include <iostream>
 #include <cctype>
 #include <cstdlib>
+#include <windows.h>
+#include <vcl.h>
+
+#ifndef __GNUC__
 #include "TypeConv.h"
 #include "Bulk.h"
+#endif
 //---------------------------------------------------------------------------
 using namespace std;
 //---------------------------------------------------------------------------
@@ -647,18 +652,18 @@ wstring CDataBuf::Dump(uint Address, uint Length, byte* InBuf)
   return text.str();
 }
 //---------------------------------------------------------------------------
-void CEndian::SwapWords (word* Buffer, uint Length)
+void CEndian::Swap(word* Buffer, uint Length)
 {
   for(; Length; Length--) {
-    *Buffer = SwapWord(*Buffer);
+    *Buffer = Swap(*Buffer);
     ++Buffer;
   }
 }
 //---------------------------------------------------------------------------
-void CEndian::SwapDWords (dword* Buffer, uint Length)
+void CEndian::Swap(dword* Buffer, uint Length)
 {
 	for(; Length; Length--) {
-		*Buffer = SwapDWord(*Buffer);
+		*Buffer = Swap(*Buffer);
 		++Buffer;
   }
 }

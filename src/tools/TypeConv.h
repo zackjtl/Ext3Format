@@ -1,7 +1,7 @@
 #ifndef TypeConvH
 #define TypeConvH
 //-----------------------------------------------------------------------------
-#include "Pch.h"
+////#include "Pch.h"
 #include "Types.h"
 #include "BaseError.h"
 #include <string>
@@ -940,19 +940,19 @@ void RegExHexStrToInts(const wstring& Text, vector<T>& Ints, bool SortInts = tru
 class CEndian
 {
 public :
-  word SwapWord(word Value)
+  word Swap(word Value)
   {
     return ((Value >> 8) + (Value << 8));
   }
-  dword SwapDWord(dword Value)
+  dword Swap(dword Value)
   {
     return ((Value << 24) +
             (Value >> 24) +
             ((Value << 8) & 0x00FF0000) +
             ((Value >> 8) & 0x0000FF00));
   }
-  void SwapWords(word* Buffer, uint Length);
-  void SwapDWords(dword* Buffer, uint Length);
+  void Swap(word* Buffer, uint Length);
+  void Swap(dword* Buffer, uint Length);
 };
 //-----------------------------------------------------------------------------
 wstring ToWideString(const string& Source);
