@@ -5,15 +5,15 @@
 #include "Inode.h"
 
 CBlockGroup::CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, CBlockManager& BlockMan)
-  : _Index(Index),
+  : _GroupId(Index),
     _Super(Super),
     _Params(Params),
     _BlockMan(BlockMan)
 {  
   uint32 lastGroup = Params.GroupCount - 1;
 
-  _StartBlock = Super.BlocksPerGroup * Index;
-  _BlockCount = _Index == lastGroup ? 
+  StartBlock = Super.BlocksPerGroup * Index;
+  _BlockCount = _GroupId == lastGroup ? 
                  Super.BlocksPerGroup : Params.BlocksOfLastGroup;
 
   _HaveSuperBlockBackup = bg_has_super(Super, Index);  
@@ -41,10 +41,10 @@ void CBlockGroup::Initial()
 
   uint32 blockSize = (1 << _Super.BlockSizeFlag) * 1024;
 
-  uint32 superBlockCnt = (1 + _Params.GroupDescBlockCnt + _Super.ReservedBlockCnt) * 
+  uint32 superBlockCnt = (1 + _Params.GroupDescBlockCnt + _Super.RsvdGdtBlocks) *
                           (_HaveSuperBlockBackup ? 1 : 0);
 
-  _RsvdGdtBlockOffset = 1 + _Params.GroupDescBlockCnt; 
+  RsvdGdtBlockOffset = StartBlock + _Params.RsvdGdtBlockOffset;
                           
   _BlockBmpBlocks = div_ceil(blockBmpSize, CExt2Params::BlockSize);
   _InodeBmpBlocks = div_ceil(inodeBmpSize, CExt2Params::BlockSize);
@@ -52,7 +52,7 @@ void CBlockGroup::Initial()
 
   _FsBlocks = superBlockCnt + _BlockBmpBlocks + _InodeBmpBlocks + _InodeTableBlocks; 
   
-  Desc.BlockBmpBlock = _StartBlock + superBlockCnt;
+  Desc.BlockBmpBlock = StartBlock + superBlockCnt;
   
   /* The bmp blocks was constrained in one block ? */
   Desc.InodeBmpBlock = Desc.BlockBmpBlock + _BlockBmpBlocks;   
@@ -67,11 +67,89 @@ void CBlockGroup::Initial()
   Desc.NeverUsedInodeCnt = 0;
   Desc.GroupDescChecksum = 0;
 
-  if (inodeBmpSize) {
-    _InodeBmp.resize(inodeBmpSize, 0xFF);
-  }
-  
+  _InodeBmp.resize(inodeBmpSize, 0x00);
+  _BlockBmp.resize(blockBmpSize, 0x00);
 }
+
+
+std::vector<byte>& CBlockGroup::GetBlockBmp()
+{
+  return _BlockBmp;
+}
+
+std::vector<byte>& CBlockGroup::GetInodeBmp()
+{
+  return _InodeBmp;
+}
+
+/*
+ *  Synchronous block bitmap from block manager and update descript table.
+ */
+void CBlockGroup::UpdateGroupInfo(CBlockManager& BlockMan)
+{
+  uint32 bmpOffset = StartBlock / 8;
+  uint32 bmpLen = _Params.BlocksPerGroup / 8;
+
+  vector<byte>& globBmp = BlockMan.GetBlockBmp();
+
+  if (globBmp.size() <= bmpOffset) {
+    throw CError(L"Incorrect Global Block BMP size");
+  }
+
+  _BlockBmp.resize(_Params.BlockSize, 0);  
+  memcpy((byte*)&_BlockBmp[0], (byte*)&globBmp[bmpOffset], bmpLen);    
+
+  Desc.DirectoriesCount = 0;
+  Desc.FreeBlockCount = _GroupId == (_Params.GroupCount - 1) ? 
+                          _Params.BlocksOfLastGroup : _Params.BlocksPerGroup;
+
+  for (uint32 block = 0; block < _Params.BlocksPerGroup; ++block) {
+    if (_BlockBmp[block / 8] & (0x01 << (block % 8))) {
+      --Desc.FreeBlockCount; 
+    }
+  }
+
+  int inodeCnt = _InodeList.size();
+
+  for (int i = 0; i < inodeCnt; ++i)
+    if (_InodeList[i]->Mode == EXT2_FT_DIR)       
+      ++Desc.DirectoriesCount;  
+}
+
+void CBlockGroup::UpdateInodeTables()
+{
+	uint32 inodeCnt = _InodeList.size();
+  assert((inodeCnt + Desc.FreeInodeCount) == _Super.InodesPerGroup);
+
+  for (uint32 i = 0; i < inodeCnt; ++i) {
+    _InodeList[i]->UpdateInodeTable();
+  }
+}
+
+/* Flush inode data into the inode blocks */
+void CBlockGroup::FlushInodeTables(CBlockManager& BlockMan)
+{
+	uint32 inodeCnt = _InodeList.size();
+	uint32 flush_size = inodeCnt * _Super.InodeSize;
+	uint32 flush_blocks = div_ceil(flush_size, _Params.BlockSize);
+
+	assert((inodeCnt + Desc.FreeInodeCount) == _Super.InodesPerGroup);
+
+	if (flush_blocks == 0) {
+  	return;
+	}
+	Bulk<byte> buffer(flush_blocks * _Params.BlockSize);
+  memset(buffer.Data(), 0x00, buffer.Size());  
+  TInode* pInode = (TInode*)buffer.Data();
+
+  for (uint32 i = 0; i < inodeCnt; ++i) {
+    CInode* inode = _InodeList[i];
+    *pInode = inode->Inode;
+  }  
+  
+  BlockMan.SetBlockData(Desc.InodeTableBlock, buffer.Data(), buffer.Size());   
+}
+
 
 int test_root(uint32 a, uint32 b)
 {
@@ -88,7 +166,7 @@ int test_root(uint32 a, uint32 b)
 
 bool CBlockGroup::bg_has_super(TSuperBlock& Super, uint32 GroupIndex) 
 {
-	if (GroupIndex) 
+	if (GroupIndex == 0) 
 		return true;
 		
 	if (Super.CompFeatureFlags & EXT4_FEATURE_COMPAT_SPARSE_SUPER2) {
@@ -117,14 +195,14 @@ bool CBlockGroup::bg_has_super(TSuperBlock& Super, uint32 GroupIndex)
  */
 void CBlockGroup::OccupyFileSystemBlocks()
 { 
-  if (!_BlockMan.OccupyBlock(_StartBlock, _FsBlocks)) {
+  if (!_BlockMan.OccupyBlock(StartBlock, _FsBlocks)) {
     throw CError(L"Failed to occupy the file system needed blocks in the block group");
   }
 }
 
 uint CBlockGroup::GetStartInodeIndex()
 {
-  return _Super.InodesPerGroup * _Index;
+  return _Super.InodesPerGroup * _GroupId;
 }
 
 /* Have free inode to be allocated */
@@ -132,52 +210,46 @@ bool CBlockGroup::HaveFreeInode()
 {
   return Desc.FreeInodeCount == 0 ? false : true;
 }
-/*
- *  Setup the Reserved GDT Block data.
- */
 
-void CBlockGroup::CreateRsvdGdtBlockData()
+/* Have super block backup */
+bool CBlockGroup::HaveSuperBlockBackup()
 {
-  _RsvdGdtBlockOffset;
-
-  Bulk<byte>  buffer(_Super.ReservedBlockCnt * _Params.BlockSize);
-  memset(buffer, 0, buffer.Size());  
-
-  if (_Index == 0) {
-    /*  
-     *  Only the gdt block of 1st group have the address table of the others 
-     *  gdt blocks.
-     */
-    byte* ptr = NULL;    
-    
-    for (uint32 index = 0; index < _Super.ReservedBlockCnt; ++index) {    
-      ptr = buffer.Data() + index * _Params.BlockSize;
-      uint32* ptr32 = (uint32*)ptr;
-
-      for (int gp = 1; gp < _Params.GroupCount; ++gp) {
-        if (bg_has_super(_Super, gp)) {
-          *ptr32 = gp * _Super.BlocksPerGroup + (1 +  _Params.GroupDescBlockCnt);
-          ++ptr32;
-        }
-      }
-    }
-  }
-
-  _BlockMan.SetBlockData(_RsvdGdtBlockOffset, buffer.Data(), buffer.Size());
+  return _HaveSuperBlockBackup;
 }
 
 /* Acquire inode from this group */
-uint32 CBlockGroup::AllocateNewInode()
+CInode* CBlockGroup::AllocateNewInode(uint8 Type)
 {
   if (Desc.FreeInodeCount == 0) {
-    return CInode::invalid_inode;
+    return NULL;
   }
 
   for (uint32 i = 0; i < _Super.InodesPerGroup; ++i) {
     if (!inode_used(i)) {
+      CInode* inode = CInode::Create(Type, _Params.BlockSize);
+      _InodeList.push_back(inode);    
       --Desc.FreeInodeCount;
-      return i;
+      inode->SetIndex(_GroupId * _Super.InodesPerGroup + i);
+      inode->SetGroupID(_GroupId);
+      set_inode_used(i);
+      return inode;
     }    
   }
-  return CInode::invalid_inode;
+  return NULL;
 }
+
+/* Acquire specific inode number from this group */
+bool CBlockGroup::OccupyInodeNumber(CInode* Inode, uint32 InodeNo)
+{
+  if (inode_used(InodeNo)) {
+    //throw CError(L"The indicated inode has been occupied.");
+    return false;
+  } 
+  _InodeList.push_back(Inode);
+  --Desc.FreeInodeCount;
+	Inode->SetIndex(InodeNo);
+	Inode->SetGroupID(_GroupId);
+  set_inode_used(InodeNo); 
+  return true;
+}
+

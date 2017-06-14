@@ -3,7 +3,7 @@
 #define KeyValuePrinterH
 //---------------------------------------------------------------------------
 #include <string>
-#include "Types.h"
+#include "BaseTypes.h"
 using namespace std;
 //---------------------------------------------------------------------------
 class CKeyValuePrinter

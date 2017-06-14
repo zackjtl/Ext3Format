@@ -1,7 +1,7 @@
 #ifndef BlockManagerH
 #define BlockManagerH
 
-#include "Types.h"
+#include "BaseTypes.h"
 #include "Bulk.h"
 #include "BitArray.h"
 #include <vector>
@@ -42,13 +42,20 @@ public:
 
 	/*	Get block data pasted continuously from the block address in the
 	 *	input vector that may be ordered randomly.    */
+	void GetBlockData(uint32 StartBlock, byte* Data, uint32 Length);
 	void GetBlockData(vector<uint32>& Blocks, byte* Data, uint32 Length);
 
 	void SetSingleBlockData(uint32 Block, byte* Data, uint32 Length);
 	void GetSingleBlockData(uint32 Block, byte* Data, uint32 Length);
 
+  bool HasBlockOccupied(uint32 Block);
+  bool HasBlockWritten(uint32 Block);
+
 	Bulk<byte>* CreateSingleBlockDataBuffer(uint32 Block);
 	Bulk<byte>* GetSingleBlockDataBuffer(uint32 Block);
+
+	std::vector<byte>& GetBlockBmp();
+	std::vector<byte>& GetWrittenBmp();
 
 private:
 

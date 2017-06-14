@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------
 #ifndef BitArrayH
 #define BitArrayH
-#include "Types.h"
+#include "BaseTypes.h"
 #include "Bulk.h"
 #include <memory>
 #include <string>

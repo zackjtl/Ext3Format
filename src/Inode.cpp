@@ -1,10 +1,22 @@
 #include "Inode.h"
 #include "GlobalDef.h"
 #include "BaseError.h"
+#include "FileInode.h"
+#include "FolderInode.h"
+#include "my_uuid.h"
 
 CInode* CInode::Create(uint16 Mode, uint32 Block_Size)
 {
 	// TODO: Return a new CInode object with the type specified by the input Mode.
+	if (EXT2_FT_DIR == Mode) {
+		return new CFolderInode(Block_Size);
+	}
+	else if (EXT2_FT_REG_FILE == Mode) {
+ 		return new CFileInode(Block_Size);
+	}
+	else {
+		throw CError(L"Attempt to create a unknown type of inode failed");
+	}
 }
 
 CInode::CInode(uint16 Mode, uint32 Block_Size)
@@ -13,7 +25,11 @@ CInode::CInode(uint16 Mode, uint32 Block_Size)
 		AddrPerBlock(Block_Size / sizeof(uint32)),
 		IndirectBlockThreshold(EXT2_NDIR_BLOCKS),
 		DIndirectBlockThreshold(EXT2_NDIR_BLOCKS + AddrPerBlock),
-		TIndirectBlockThreshold(DIndirectBlockThreshold + AddrPerBlock * AddrPerBlock)
+		TIndirectBlockThreshold(DIndirectBlockThreshold + AddrPerBlock * AddrPerBlock),
+		_Index(0),
+		_GroupID(0),
+		Permissions(0),
+		_Name("")
 {
 	_Position = 0;
 	_Size = 0;
@@ -33,14 +49,60 @@ uint64 CInode::GetPosition()
 	return _Position;
 }
 
-#define get_parent(x) (x / AddrPerBlock)
-#define to_local(x)   (x % AddrPerBlock)
+uint32 CInode::GetIndex()
+{
+	return _Index;
+}
+
+string CInode::GetName()
+{
+	return _Name;
+}
+
+void CInode::SetIndex(uint32 Index)
+{
+	_Index = Index;
+}
+
+void CInode::SetGroupID(uint16 GroupID)
+{
+  _GroupID = GroupID;
+}
+
+void CInode::SetName(const string& Name)
+{
+	_Name = Name;
+}
+
+
+void CInode::UpdateInodeTable()
+{
+  Inode.Mode = (Mode << 12) + Permissions;
+  Inode.Uid = 0;
+  Inode.SizeInBytesLo = (uint32)_Size;
+  Inode.SizeInBytesHi = _Size >> 32;
+	time((long*)&Inode.AccessTime);
+  Inode.InodeChangeTime = Inode.AccessTime;
+  Inode.ModificationTime = Inode.AccessTime;
+  Inode.DeleteTime = 0;
+  Inode.GroupId = _GroupID;
+  Inode.SectorCount = (_Size + 511) / 512;
+  Inode.FileFlags = 0;
+  Inode.HardLinkCnt = 1;  /* For regular file, this is always 1 */
+  Inode.OS_Dep1 = 0;
+  Inode.FileVersion = 0;
+  Inode.FragAddress = 0;
+  Inode.FragNumber = 0;
+  Inode.FragSize = 0;
+  Inode.Padding = 0;
+  memset((byte*)&Inode.Rsvd[0], 0, sizeof(Inode.Rsvd));  
+}
 
 /*
  *  Set data into block units in the block manager.
  *  But not real write into storage media.
  */
-int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, int Length)
+int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 {
 	uint32 blockPos = _Position / BlockSize;
 	uint32 headOffset = _Position % BlockSize;
@@ -58,8 +120,8 @@ int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, int Length)
 			}
 		}
 
-    bytesWritten = BlockSize - headOffset;
-    Bulk<byte> buffer(BlockSize);
+		bytesWritten = Length >= BlockSize ? (BlockSize - headOffset) : Length;
+		Bulk<byte> buffer(BlockSize);
 
     BlockMan.GetSingleBlockData(realBlock, buffer, buffer.Size());
     memcpy(buffer.Data() + headOffset, Buffer, bytesWritten);
@@ -143,7 +205,7 @@ uint32 CInode::alloc_dir_blocks(CBlockManager& BlockMan, uint32 RequireBlocks)
 	uint32 direct_alloc_cnt = min_of(remain, dir_remain);
 
 	if (direct_alloc_cnt != 0) {
-		for (int i = 0; i < direct_alloc_cnt; ++i) {
+		for (uint32 i = 0; i < direct_alloc_cnt; ++i) {
 			uint32 block;
 
 			if (BlockMan.AutoAllocSingleBlock(block)) {
@@ -211,6 +273,7 @@ uint32 CInode::alloc_dindr_blocks(CBlockManager& BlockMan, uint32 RequireBlocks)
     BlockMan.CreateSingleBlockDataBuffer(dindir);
 	}
 	uint remain = GrowthTree(DIndirect, BlockMan, RequireBlocks);
+
 	return remain;
 }
 /*
@@ -274,7 +337,7 @@ uint32 CInode::GrowthTree(CIndrMatrix& Matrix, CBlockManager& BlockMan, uint32 R
 		}
 	}
 
-	for (uint8 layer = 0; layer <= leaf_layer; ++layer) {
+	for (uint layer = 0; layer <= leaf_layer; ++layer) {
 		vector<uint32> retBlocks;
 
 		uint32 remain = BlockMan.AutoAllocBlock(layer_alloc_size[layer], retBlocks);
@@ -285,15 +348,16 @@ uint32 CInode::GrowthTree(CIndrMatrix& Matrix, CBlockManager& BlockMan, uint32 R
 			if (remain)
 				throw CError(L"Out of block used");
 
+			UpdateAddressTable(Matrix, BlockMan, retBlocks.size(), layer);
+
 			return (RequireBlocks - layer_alloc_size[layer]);
 		}
 		else {
 			assert(remain == 0);
 		}
-		if (layer > 0) {
-			UpdateAddressTable(Matrix, BlockMan, retBlocks.size(), layer);
-		}
+		UpdateAddressTable(Matrix, BlockMan, retBlocks.size(), layer);
 	}
+	return RequireBlocks;
 }
 
 /*
@@ -302,7 +366,27 @@ uint32 CInode::GrowthTree(CIndrMatrix& Matrix, CBlockManager& BlockMan, uint32 R
 void CInode::UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 															 uint32 NewCount, uint8 Layer)
 {
-	assert(Layer > 0);
+	#define get_parent(x, y) (Matrix[x-1][y/AddrPerBlock])
+	#define to_local(x)   (x % AddrPerBlock)
+
+	if (Layer == 0) {
+  	/* Update the root block data */
+		uint32 root_block;
+
+		if (Matrix.size() == 2)
+			root_block = Inode.Blocks[EXT2_DIND_BLOCK];
+		else
+			root_block = Inode.Blocks[EXT2_TIND_BLOCK];
+
+		Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(root_block);
+
+		if (buffer == NULL) {
+			buffer = BlockMan.CreateSingleBlockDataBuffer(root_block);
+		}
+		memcpy(buffer->Data(), &Matrix[0][0], Matrix[0].size() * sizeof(uint32));
+		return;
+	}
+
 	uint8 parent_layer = Layer - 1;
 
 	vector<uint32>& parent_array = Matrix[parent_layer];
@@ -311,11 +395,11 @@ void CInode::UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 
 	uint32 position = child_total - NewCount;
 	uint32 local_pos = to_local(position);
-	uint32 parent_block = get_parent(position);
+	uint32 parent_block = get_parent(Layer, position);
 
 	Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(parent_block);
 
-  if (buffer == NULL) {
+	if (buffer == NULL) {
     buffer = BlockMan.CreateSingleBlockDataBuffer(parent_block);
   }  
 	uint32* ptr = (uint32*)buffer->Data();
@@ -324,12 +408,13 @@ void CInode::UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 	while (position < child_total) {
 		*ptr++ = child_array[position++];
     
-		if (get_parent(position) != parent_block) {
-      parent_block = get_parent(position);
+		if (get_parent(Layer, position) != parent_block) {
+			parent_block = get_parent(Layer, position);
+			
 			buffer = BlockMan.GetSingleBlockDataBuffer(parent_block);      
 
       if (buffer == NULL) {
-        buffer = BlockMan.CreateSingleBlockDataBuffer(parent_block);
+				buffer = BlockMan.CreateSingleBlockDataBuffer(parent_block);
       }        
       ptr = (uint32*)buffer->Data();
 		}
@@ -341,7 +426,7 @@ void CInode::make_layer_curr_sizes(uint32 Sizes[3], CIndrMatrix& Matrix)
 {
 	uint layer_cnt = Matrix.size();
 
-	for (int i = 0; i < 3; ++i) {
+	for (uint i = 0; i < 3; ++i) {
 		if (i < layer_cnt)
 			Sizes[i] = Matrix[i].size();
 		else
@@ -439,5 +524,80 @@ void CInode::GetLeafBlocks(vector<uint32>& Blocks)
 	}
 }
 
+/*
+ * 	Validate the direct blocks table data.
+ */
+void CInode::ValidateDirectLink(CBlockManager& BlockMan)
+{
+  uint8 directCnt = Direct.size();
+
+  if (memcmp((byte*)&Inode.Blocks[0], (byte*)&Direct[0], directCnt * sizeof(uint32)) != 0) {
+    throw CError(L"Compare direct address block in the Inode table from the vector failed");  
+  }
+}
+
+
+/*
+ * 	Validate the indirect blocks table data.
+ */
+void CInode::ValidateIndirectLink(CBlockManager& BlockMan)
+{
+	uint block = Inode.Blocks[EXT2_IND_BLOCK];
+
+	Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(block);
+
+	assert(buffer != NULL);
+
+  uint indr_cnt = Indirect.size();
+
+	if (memcmp(buffer->Data(), (uint8*)&Indirect[0], indr_cnt * sizeof(uint32)) != 0) {
+   	throw CError(L"Compare indirect address block from the vector failed");
+	}
+}
+
+/*
+ * 	Validate the blocks for writing the address link of inode indirect trees.
+ *	Compare the address table with the matrix.
+ */
+void CInode::ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix)
+{
+	uint32 max_layer = Matrix.size();
+	uint32 layer_size;
+	uint32 root_block;
+
+	if (max_layer == 2)
+		root_block = Inode.Blocks[EXT2_DIND_BLOCK];
+	else
+    root_block = Inode.Blocks[EXT2_TIND_BLOCK];
+
+	Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(root_block);
+	assert(buffer != NULL);
+
+	uint count = Matrix[0].size();
+
+	if (memcmp(buffer->Data(), (uint8*)&Matrix[0][0], count * sizeof(uint32)) != 0) {
+		throw CError(L"Compare first layer address block from the matrix failed");
+	}
+
+	for (uint32 layer = 0; layer < (max_layer - 1); ++layer) {
+		layer_size = Matrix[layer].size();
+		uint32 next_layer_size = Matrix[layer+1].size();
+
+		for (uint32 block = 0; block < layer_size; ++block) {
+			uint32 addr_block = Matrix[layer][block];
+
+			buffer = BlockMan.GetSingleBlockDataBuffer(addr_block);
+			assert(buffer != NULL);
+
+			uint child_offset = block * AddrPerBlock;
+			uint child_cnt = min_of(next_layer_size - child_offset, AddrPerBlock);
+
+			if (memcmp(buffer->Data(), (uint8*)&Matrix[layer+1][child_offset],
+										child_cnt * sizeof(uint32)) != 0) {
+				throw CError(L"Compare child layer address block from the matrix failed");
+			}
+		}
+	}
+}
 
 

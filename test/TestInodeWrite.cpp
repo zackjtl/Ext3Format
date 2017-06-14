@@ -34,7 +34,7 @@ uint32 BlockPos = 0;
 
 void GetRealBlocks(vector<uint32>& Blocks, uint32 StartBlock, uint32 Count)
 {
-	for (int i = StartBlock; i < (StartBlock + Count); ++i) {
+	for (uint32 i = StartBlock; i < (StartBlock + Count); ++i) {
 		uint32 real;
 
 		if (!inode.IndexToRealBlock(i, real)) {
@@ -173,6 +173,20 @@ void WriteDIndirectBlockToTIndirectBlock()
 	ptr += length;
 }
 
+void ValidateIndirectTable()
+{
+	inode.ValidateIndirectLink(man);
+}
+
+void ValidateDIndirectTable()
+{
+	inode.ValidateMultilayerLink(man, inode.DIndirect);
+}
+
+void ValidateTIndirectTable()
+{
+	inode.ValidateMultilayerLink(man, inode.TIndirect);
+}
 
 /*
  * 	An universal used function for testing. Create data with continue
@@ -186,7 +200,7 @@ void make_pattern(byte* Buffer, byte StartPattern, uint32 Length)
 
 	srand(time(NULL));
 
-	for (int i = 0; i < sectorCnt; ++i) {
+	for (uint32 i = 0; i < sectorCnt; ++i) {
 		if (StartPattern == 255) {
 			StartPattern = 0;
 		}

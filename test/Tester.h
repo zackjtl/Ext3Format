@@ -3,7 +3,7 @@
 #define TesterH
 //---------------------------------------------------------------------------
 #include <string>
-#include "Types.h"
+#include "BaseTypes.h"
 #include "TypeConv.h"
 #include "BaseError.h"
 

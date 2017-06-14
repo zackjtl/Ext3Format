@@ -1,7 +1,7 @@
 #pragma hdrstop
 #include "TestDataArea.h"
 #include "DataArea.h"
-#include "Types.h"
+#include "BaseTypes.h"
 #include "BaseError.h"
 #include <assert.h>
 

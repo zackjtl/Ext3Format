@@ -2,11 +2,13 @@
 #define Ext3FsH
 
 #include "Tables.h"
-#include "Types.h"
+#include "BaseTypes.h"
 #include "Ext2Params.h"
 #include "BlockGroup.h"
 #include "BlockManager.h"
+#include "FolderInode.h"
 #include <vector>
+#include "UsbDrive.h"
 
 class CExt3Fs
 {
@@ -15,18 +17,33 @@ public:
   ~CExt3Fs();
 
   void Create();
-  
+
+	void Write(CUsbDrive& Drive);
 
 private:
 	void InitSuperBlock();
   void CreateBlockManager();
   void CreateBlockGroups();
-  
+
+	void CalcReservedBlocks();
 	void CalcReservedGdtBlocks();
 	void CalcInodeNumber();
 
-private:
+  void CreateRootDirectory();
+	void CreateResizeInode();
+	void CreateLostAndFoundDirectory();
   
+  void UpdateBlockGroupsInfo();
+  void UpdateInodeTables();
+  void UpdateSuperBlock();
+
+	void FlushGroupDescData();
+	void FlushBlockBmp();
+	void FlushInodeBmp();
+  void FlushInodeTables();
+  void FlushSuperBlock();
+
+	void WriteArea(CUsbDrive& Drive, uint32 StartBlock, uint32 Count);
 
 public:
   TSuperBlock   Super;
@@ -35,9 +52,10 @@ public:
 
   CExt2Params   Params;
 
-	std::vector<CBlockGroup*> 	BlockGroups;
-	auto_ptr<CBlockManager>	  	BlockMan;
-  
+	std::vector<CBlockGroup*> 		BlockGroups;
+	unique_ptr<CBlockManager>	   	BlockMan;
+
+	CFolderInode*               	RootInode;
 };
 
 #endif

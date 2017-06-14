@@ -34,6 +34,26 @@ CBlockManager::~CBlockManager()
 #define unset_used(x) {_UsedBmp[x / 8] &= ~(0x01 << (x % 8)); }
 #define unset_written(x) {_WrittenBmp[x / 8] &= ~(0x01 << (x % 8));}
 
+bool CBlockManager::HasBlockOccupied(uint32 Block)
+{
+  return used_test(Block);
+}
+
+bool CBlockManager::HasBlockWritten(uint32 Block)
+{
+  return written_test(Block);
+}
+
+std::vector<byte>& CBlockManager::GetBlockBmp()
+{
+  return _UsedBmp;
+}
+
+std::vector<byte>& CBlockManager::GetWrittenBmp()
+{
+	return _WrittenBmp;
+}
+
 /* 	Automatically allocate the specific amount of free blocks
  *  The returned value is the remaining blocks that not allocated.
  *  The returned vector is the block that allocated,
@@ -93,10 +113,10 @@ bool CBlockManager::OccupyBlock(uint32 StartBlock, uint32 Count)
 	if ((StartBlock + Count) >= _TotalBlocks) {
 		throw CError(L"The required block count to occupy exceeds the total blocks");
 	}
-	uint32 endBlock = StartBlock + Count - 1;
+	uint endBlock = StartBlock + Count - 1;
 	bool permit = true;
 
-	for (int i = StartBlock; i <= endBlock; ++i) {
+	for (uint i = StartBlock; i <= endBlock; ++i) {
 		if (used_test(i)) {
 			permit = false;
 			break;
@@ -104,7 +124,7 @@ bool CBlockManager::OccupyBlock(uint32 StartBlock, uint32 Count)
 		//set_used(i);
 	}
 	if (permit)	{
-		for (int i = StartBlock; i <= endBlock; ++i) {
+		for (uint i = StartBlock; i <= endBlock; ++i) {
 			set_used(i);
 		}
 	}
@@ -116,12 +136,12 @@ bool CBlockManager::OccupyBlock(uint32 StartBlock, uint32 Count)
  */
 void CBlockManager::SetBlockData(uint32 StartBlock, byte* Data, uint32 Length)
 {
-  uint count = Length / _BlockSize;
+	uint count = Length / _BlockSize;
   
   vector<uint32>  blocks;
 
-  for (int i = 0; i < count; ++i) {
-    blocks.push_back(i + StartBlock);
+	for (uint i = 0; i < count; ++i) {
+		blocks.push_back(i + StartBlock);
   }
   SetBlockData(blocks, Data, Length); 
 }
@@ -139,7 +159,7 @@ void CBlockManager::SetBlockData(vector<uint32>& Blocks, byte* Data, uint32 Leng
 
 	byte* ptr = Data;
 
-	for (int i = 0; i < count; ++i) {
+	for (uint i = 0; i < count; ++i) {
 		if (Blocks[i] >= _TotalBlocks) {
 			throw CError(L"The block address to set data exceeds the total blocks");
 		}
@@ -170,6 +190,18 @@ void CBlockManager::SetBlockData(vector<uint32>& Blocks, byte* Data, uint32 Leng
 /*	Get block data pasted continuously from the block address in the
  *	input vector that may be ordered randomly.
  */
+void CBlockManager::GetBlockData(uint32 StartBlock, byte* Data, uint32 Length)
+{
+	uint count = Length / _BlockSize;
+
+  vector<uint32>  blocks;
+
+	for (uint i = 0; i < count; ++i) {
+		blocks.push_back(i + StartBlock);
+  }
+  GetBlockData(blocks, Data, Length);
+}
+
 void CBlockManager::GetBlockData(vector<uint32>& Blocks, byte* Data, uint32 Length)
 {
 	uint count = Blocks.size();
@@ -181,7 +213,7 @@ void CBlockManager::GetBlockData(vector<uint32>& Blocks, byte* Data, uint32 Leng
 
 	byte* ptr = Data;
 
-	for (int i = 0; i < count; ++i) {
+	for (uint i = 0; i < count; ++i) {
 		if (Blocks[i] >= _TotalBlocks) {
 			throw CError(L"The block address to get data exceeds the total blocks");
 		}

@@ -1,7 +1,7 @@
 #ifndef my_uuidH
 #define my_uuidH
 
-#include "Types.h"
+#include "BaseTypes.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,8 +12,12 @@ namespace myuuid {
 	}
 }
 
-void gen_uuid_v4(byte* uuid, uint32 count)
+void gen_uuid_v4(byte* uuid, uint32 BufferLen)
 {
+  if (BufferLen < 16) {
+    return;
+  }
+
 	srand(time(NULL));
 
 	uint16* ptr16 = (uint16*)&uuid[0];

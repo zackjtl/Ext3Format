@@ -18,6 +18,7 @@
 #include "TestBlockManager.h"
 #include "TestInode.h"
 #include "TestInodeWrite.h"
+#include "TestExt3Fs.h"
 ////#include "my_uuid.h"
 #include "TestUUID.h"
 
@@ -48,7 +49,13 @@ int _tmain(int argc, _TCHAR* argv[])
 									{show_caption, L"Inode Data Access Test"},
 									{WriteDirectBlockToIndirectBlock, L"Write inode from direct to indirect blocks"},
 									{WriteIndirectBlockToDIndirectBlock, L"Write inode from indirect to d_indirect blocks"},
-									{WriteDIndirectBlockToTIndirectBlock, L"Write inode from d_indirect to t_indirect blocks"}};
+									{WriteDIndirectBlockToTIndirectBlock, L"Write inode from d_indirect to t_indirect blocks"},
+									{ValidateIndirectTable, L"Validate address table linking of indirect blocks"},
+									{ValidateDIndirectTable, L"Validate address table linking of d_indirect blocks"},
+									{ValidateTIndirectTable, L"Validate address table linking of t_indirect blocks"},
+									{show_caption, L"EXT3 File System Creation"},
+									{TestExt3Fs128GB, L"EXT3 File System with 128GB"},
+									{TestExt3FsReadWrite, L"Test real format storage with ext3"}};
 
 
 	int cnt = sizeof(tests) / sizeof(tests[0]);

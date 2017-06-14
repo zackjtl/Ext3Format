@@ -1,7 +1,7 @@
 #ifndef InodeH
 #define InodeH
 
-#include "Types.h"
+#include "BaseTypes.h"
 #include "BlockManager.h"
 #include "Tables.h"
 #include "Bulk.h"
@@ -14,11 +14,18 @@ class CInode
 public:
 	static CInode* Create(uint16 Mode, uint32 BlockSize);
 
-	CInode(uint16 Mode, uint32 AddressPerBlock);
+	CInode(uint16 Mode, uint32 Block_Size);
 	~CInode();
 
 	uint64 GetSize();
 	uint64 GetPosition();
+
+	uint32 GetIndex();
+	std::string GetName();
+
+	void SetIndex(uint32 Index);
+  void SetGroupID(uint16 GroupID);
+	void SetName(const std::string& Name);
 
 #ifdef _TEST_
 public:	/* Public for testing. */
@@ -26,7 +33,7 @@ public:	/* Public for testing. */
 protected:
 #endif
 
-	int WriteData(CBlockManager& BlockMan, byte* Buffer, int Length);
+	int WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length);
 
 	uint32 alloc_blocks(CBlockManager& BlockMan, uint32 RequireBlock);
 	uint32 alloc_dir_blocks(CBlockManager& BlockMan, uint32 RequireBlocks);
@@ -46,9 +53,16 @@ protected:
 	void UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 													uint32 NewCount, uint8 Layer);
 
+  void ValidateDirectLink(CBlockManager& BlockMan);
+	void ValidateIndirectLink(CBlockManager& BlockMan);
+	void ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix);
+
+  virtual void UpdateInodeTable();
+
 public:
 	TInode		Inode;
 	uint16 		Mode;
+  uint16    Permissions;
   uint32    BlockSize;
 	uint32		AddrPerBlock;
 
@@ -73,6 +87,10 @@ protected:
   /* The position of current data pointer (byte unit) */
 	uint64  _Position;
 	uint64	_Size;
+
+	uint32				_Index;
+  uint16        _GroupID;
+	std::string  	_Name;
 };
 
 #endif

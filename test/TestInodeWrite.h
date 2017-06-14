@@ -2,11 +2,15 @@
 #ifndef TestInodeWriteH
 #define TestInodeWriteH
 //---------------------------------------------------------------------------
-#include "Types.h"
+#include "BaseTypes.h"
 
 void WriteDirectBlockToIndirectBlock();
 void WriteIndirectBlockToDIndirectBlock();
 void WriteDIndirectBlockToTIndirectBlock();
+
+void ValidateIndirectTable();
+void ValidateDIndirectTable();
+void ValidateTIndirectTable();
 
 
 /* This is not a test function */

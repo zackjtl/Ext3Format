@@ -1,7 +1,7 @@
 #ifndef Ext2ParamsH
 #define Ext2ParamsH
 
-#include "Types.h"
+#include "BaseTypes.h"
 #include "Tables.h"
 #include <vector>
 
@@ -14,11 +14,13 @@ public:
   ~CExt2Params();
 
 public:
+	static uint32 MBRSize;
   static uint32 BlockSize;
   static uint32 InodeSize;
   static uint32 BlocksPerGroup;
   static uint32 InodeRatio;
   static uint32 TimeOfResize;
+  static uint8  ReservedPercent;
 
 public:
 
@@ -27,6 +29,8 @@ public:
   uint32  GroupDescPerBlock;
   uint32  GroupDescBlockCnt;
   uint32  BlocksOfLastGroup;
+  uint32  RsvdGdtBlockOffset;
+  uint32  InodeBlocksPerGroup;
 };
 
 #endif

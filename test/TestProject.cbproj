@@ -45,13 +45,17 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
+        <VerInfo_Locale>1028</VerInfo_Locale>
+        <BCC_wpch>false</BCC_wpch>
         <ProjectType>CppConsoleApplication</ProjectType>
         <_TCHARMapping>wchar_t</_TCHARMapping>
-        <ILINK_LibraryPath>..\src\tools\;..\src\;..\inc\;C:\Projects\Ext3Format\test\;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <ILINK_LibraryPath>..\src\io\ddk\;..\src\io\NormalReader\ddk\;..\src\error\;..\src\io\UsbDDK\;..\src\io\EzUsb\;..\src\io\SdCmd\;..\src\io\UT33x\;..\src\io\;..\src\io\NormalReader\;..\src\tools\;..\src\;..\inc\;C:\Projects\Ext3Format\test\;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <Multithreaded>true</Multithreaded>
         <SanitizedProjectName>TestProject</SanitizedProjectName>
         <AllPackageLibs>rtl.lib;vcl.lib</AllPackageLibs>
-        <IncludePath>..\src\tools\;..\src\;..\inc\;C:\Projects\Ext3Format\test\;$(IncludePath)</IncludePath>
+        <IncludePath>..\src\io\ddk\;..\src\io\NormalReader\ddk\;..\src\error\;..\src\io\UsbDDK\;..\src\io\EzUsb\;..\src\io\SdCmd\;..\src\io\UT33x\;..\src\io\;..\src\io\NormalReader\;..\src\tools\;..\src\;..\inc\;C:\Projects\Ext3Format\test\;$(IncludePath)</IncludePath>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <DCC_CBuilderOutput>JPHNE</DCC_CBuilderOutput>
         <IntermediateOutputDir>.\$(Platform)\$(Config)</IntermediateOutputDir>
@@ -118,8 +122,8 @@
         <BCC_PCHName_Clang>TestProjectPCH1.h</BCC_PCHName_Clang>
     </PropertyGroup>
     <ItemGroup>
-        <None Include="..\inc\BaseError.h">
-            <BuildOrder>2</BuildOrder>
+        <None Include="..\inc\BaseTypes.h">
+            <BuildOrder>39</BuildOrder>
         </None>
         <None Include="..\inc\Bulk.h">
             <BuildOrder>3</BuildOrder>
@@ -130,9 +134,6 @@
         <None Include="..\inc\my_uuid.h">
             <BuildOrder>23</BuildOrder>
         </None>
-        <None Include="..\inc\Types.h">
-            <BuildOrder>5</BuildOrder>
-        </None>
         <CppCompile Include="..\src\BlockGroup.cpp">
             <DependentOn>..\src\BlockGroup.h</DependentOn>
             <BuildOrder>12</BuildOrder>
@@ -141,6 +142,9 @@
             <DependentOn>..\src\BlockManager.h</DependentOn>
             <BuildOrder>13</BuildOrder>
         </CppCompile>
+        <None Include="..\src\error\BaseError.h">
+            <BuildOrder>56</BuildOrder>
+        </None>
         <CppCompile Include="..\src\Ext2Params.cpp">
             <DependentOn>..\src\Ext2Params.h</DependentOn>
             <BuildOrder>15</BuildOrder>
@@ -152,6 +156,10 @@
         <CppCompile Include="..\src\FileInode.cpp">
             <DependentOn>..\src\FileInode.h</DependentOn>
             <BuildOrder>22</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\FolderInode.cpp">
+            <DependentOn>..\src\FolderInode.h</DependentOn>
+            <BuildOrder>24</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\GroupDescWrapper.cpp">
             <DependentOn>..\src\GroupDescWrapper.h</DependentOn>
@@ -165,9 +173,63 @@
             <DependentOn>..\src\InodeWrapper.h</DependentOn>
             <BuildOrder>19</BuildOrder>
         </CppCompile>
+        <None Include="..\src\io\ddk\usb100.h">
+            <BuildOrder>32</BuildOrder>
+        </None>
+        <None Include="..\src\io\ddk\usbdi.h">
+            <BuildOrder>33</BuildOrder>
+        </None>
+        <None Include="..\src\io\ddk\usbioctl.h">
+            <BuildOrder>34</BuildOrder>
+        </None>
+        <None Include="..\src\io\ddk\usbiodef.h">
+            <BuildOrder>35</BuildOrder>
+        </None>
+        <CppCompile Include="..\src\io\DiskVolumn.cpp">
+            <DependentOn>..\src\io\DiskVolumn.h</DependentOn>
+            <BuildOrder>33</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\io\DriveInfo.cpp">
+            <DependentOn>..\src\io\DriveInfo.h</DependentOn>
+            <BuildOrder>34</BuildOrder>
+        </CppCompile>
+        <None Include="..\src\io\Lock.h">
+            <BuildOrder>35</BuildOrder>
+        </None>
+        <CppCompile Include="..\src\io\scsi_windows.cpp">
+            <DependentOn>..\src\io\scsi_windows.h</DependentOn>
+            <BuildOrder>39</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\io\StdCbw.cpp">
+            <DependentOn>..\src\io\StdCbw.h</DependentOn>
+            <BuildOrder>37</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\io\UsbDrive.cpp">
+            <DependentOn>..\src\io\UsbDrive.h</DependentOn>
+            <BuildOrder>38</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\io\VolumeLock.cpp">
+            <DependentOn>..\src\io\VolumeLock.h</DependentOn>
+            <BuildOrder>39</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\Pch.cpp">
+            <DependentOn>..\src\Pch.h</DependentOn>
+            <BuildOrder>33</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\ResizeInode.cpp">
+            <DependentOn>..\src\ResizeInode.h</DependentOn>
+            <BuildOrder>25</BuildOrder>
+        </CppCompile>
         <CppCompile Include="..\src\SuperBlockWrapper.cpp">
             <DependentOn>..\src\SuperBlockWrapper.h</DependentOn>
             <BuildOrder>20</BuildOrder>
+        </CppCompile>
+        <None Include="..\src\Tables.h">
+            <BuildOrder>40</BuildOrder>
+        </None>
+        <CppCompile Include="..\src\tools\BasicTimer.cpp">
+            <DependentOn>..\src\tools\BasicTimer.h</DependentOn>
+            <BuildOrder>45</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\tools\BitArray.cpp">
             <DependentOn>..\src\tools\BitArray.h</DependentOn>
@@ -191,6 +253,10 @@
         <CppCompile Include="Tester.cpp">
             <DependentOn>Tester.h</DependentOn>
             <BuildOrder>9</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="TestExt3Fs.cpp">
+            <DependentOn>TestExt3Fs.h</DependentOn>
+            <BuildOrder>26</BuildOrder>
         </CppCompile>
         <CppCompile Include="TestInode.cpp">
             <DependentOn>TestInode.h</DependentOn>

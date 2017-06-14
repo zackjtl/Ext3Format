@@ -1,7 +1,7 @@
 #ifndef TablesH
 #define TablesH
 
-#include "Types.h"
+#include "BaseTypes.h"
 
 /*
  * Constants relative to the data blocks
@@ -11,6 +11,24 @@
 #define EXT2_DIND_BLOCK			(EXT2_IND_BLOCK + 1)
 #define EXT2_TIND_BLOCK			(EXT2_DIND_BLOCK + 1)
 #define EXT2_N_BLOCKS			  (EXT2_TIND_BLOCK + 1)
+
+/*
+ * Special inode numbers
+ */
+#define EXT2_BAD_INO		 1	/* Bad blocks inode */
+#define EXT2_ROOT_INO		 2	/* Root inode */
+#define EXT4_USR_QUOTA_INO	 3	/* User quota inode */
+#define EXT4_GRP_QUOTA_INO	 4	/* Group quota inode */
+#define EXT2_BOOT_LOADER_INO	 5	/* Boot loader inode */
+#define EXT2_UNDEL_DIR_INO	 6	/* Undelete directory inode */
+#define EXT2_RESIZE_INO		 7	/* Reserved group descriptors inode */
+#define EXT2_JOURNAL_INO	 8	/* Journal inode */
+#define EXT2_EXCLUDE_INO	 9	/* The "exclude" inode, for snapshots */
+#define EXT4_REPLICA_INO	10	/* Used by non-upstream feature */
+
+/* First non-reserved inode for old ext2 filesystems */
+#define EXT2_GOOD_OLD_FIRST_INO	11
+
 
 #define JFS_MAGIC_NUMBER 0xc03b3998U /* The first 4 bytes of /dev/random! */
 
@@ -243,6 +261,17 @@ typedef struct ext2_inode {
 
 #define EXT2_FT_MAX		8
 
+/*
+ * Structure of a directory entry
+ */
+#define EXT2_NAME_LEN 255
+
+struct ext2_dir_entry {
+	uint32	inode;			/* Inode number */
+	uint16	rec_len;		/* Directory entry length */
+	uint16	name_len;		/* Name length */
+	char		name[EXT2_NAME_LEN];	/* File name */
+};
 
 
 #define JFS_DESCRIPTOR_BLOCK	1
