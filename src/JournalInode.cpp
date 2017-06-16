@@ -5,6 +5,8 @@
 #include "GlobalDef.h"
 #include "JournalSpWrapper.h"
 #include "my_uuid.h"
+#include <cstring>
+
 //---------------------------------------------------------------------------
 CJournalInode::CJournalInode(uint32 BlockSize)
   : CInode(LINUX_S_IFREG, BlockSize)

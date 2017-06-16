@@ -1,5 +1,6 @@
 #include "BlockManager.h"
 #include "BaseError.h"
+#include <cstring>
 
 using namespace std;
 

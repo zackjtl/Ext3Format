@@ -4,6 +4,7 @@
 #include "Inode.h"
 #include "BlockManager.h"
 #include "Tester.h"
+#include <cstring>
 //---------------------------------------------------------------------------
 /*
  * 	Test allocate direct blocks

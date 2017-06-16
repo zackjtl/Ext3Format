@@ -5,18 +5,21 @@
 #ifndef __GNUC__
 #include <Windows.h>
 #include <WinIoCtl.h>
+#include "scsi_windows.h"
 #endif
 #include "BaseError.h"
 #include "VolumeLock.h"
 #include "USBError.h"
-#include "scsi_windows.h"
-//#include "Ut33xDevice.h"
-using namespace scsi_base;
 
 #ifdef __GNUC__
 #define FSCTL_LOCK_VOLUME   LOCK_EX
 #define FSCTL_UNLOCK_VOLUME LOCK_UN
+
+#include "scsi_gnuc.h"
 #endif
+
+using namespace scsi_base;
+
 //---------------------------------------------------------------------------
 CVolumeLock::CVolumeLock(HANDLE Handle)
 	: _Handle(Handle),

@@ -4,6 +4,7 @@
 #include "Inode.h"
 #include "BlockManager.h"
 #include "Tester.h"
+#include <cstring>
 
 const uint32 TotalBlock = 33554432;
 const uint32 BlockSize = 1024;

@@ -1,6 +1,7 @@
 #include "InodeWrapper.h"
 #include "TypeConv.h"
 #include "KeyValuePrinter.h"
+#include <cstring>
 
 CInodeWrapper::CInodeWrapper()
 {
@@ -100,6 +101,9 @@ wstring CInodeWrapper::ToString(uint Indent)
 	dispdec(FragSize);
 	disphex(Padding);
 	disparr(Rsvd);
+
+  #undef TABLE_NAME
+  #undef SPACE_LEN
 
   return text.str();
 }

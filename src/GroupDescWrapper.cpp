@@ -1,6 +1,7 @@
 #include "GroupDescWrapper.h"
 #include "TypeConv.h"
 #include "KeyValuePrinter.h"
+#include <cstring>
 
 CGroupDescWrapper::CGroupDescWrapper()
 {
@@ -78,5 +79,8 @@ wstring CGroupDescWrapper::ToString(uint Indent)
 	dispdec(GroupDescChecksum);
 
   return text.str();
+
+  #undef TABLE_NAME
+  #undef SPACE_LEN
 }
 

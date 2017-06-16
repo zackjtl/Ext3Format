@@ -1,4 +1,4 @@
-////#include "Pch.h"
+#include "Pch.h"
 #pragma hdrstop
 //---------------------------------------------------------------------------
 #include <sstream>
@@ -6,13 +6,18 @@
 #include <iostream>
 #include <cctype>
 #include <cstdlib>
-#include <windows.h>
-#include <vcl.h>
+
+#include <stdlib.h>
+#include <stdio.h>
 
 #ifndef __GNUC__
+#include <windows.h>
+#include <vcl.h>
+#endif
+
 #include "TypeConv.h"
 #include "Bulk.h"
-#endif
+
 //---------------------------------------------------------------------------
 using namespace std;
 //---------------------------------------------------------------------------

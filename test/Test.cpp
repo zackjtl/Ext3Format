@@ -1,10 +1,12 @@
+#ifdef __BORLANDC__
 #include <vcl.h>
 #include <windows.h>
+#include <tchar.h>
+#endif
 
 #pragma hdrstop
 #pragma argsused
 
-#include <tchar.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -27,8 +29,11 @@ using namespace std;
 void show_caption()
 {
 }
-
+#ifdef __BORLANDC__
 int _tmain(int argc, _TCHAR* argv[])
+#else
+int main(int argc, char* argv[])        
+#endif      
 {
 	static const test_case tests[] =
 								 {{show_caption, L"Block Manager Test"},
@@ -79,31 +84,6 @@ int _tmain(int argc, _TCHAR* argv[])
 			wprintf(L"\n[FAIL] %s\n [FFFE]: Unkown\n", tests[i].name.c_str());
 		}
 	}
-
-	/*
-	byte uuid[16];
-
-	gen_uuid_v4(uuid, 16);
-
-	for (int i = 0; i < 4; ++i) {
-		wcout << hex << setw(2) << setfill(L'0') << uuid[i];
-	}
-	wcout << L"-";
-	for (int i = 4; i < 6; ++i) {
-		wcout << hex << setw(2) << setfill(L'0') << uuid[i];
-	}
-	wcout << L"-";
-	for (int i = 6; i < 8; ++i) {
-		wcout << hex << setw(2) << setfill(L'0') << uuid[i];
-	}
-	wcout << L"-";
-	for (int i = 8; i < 10; ++i) {
-		wcout << hex << setw(2) << setfill(L'0') << uuid[i];
-	}
-	wcout << L"-";
-	for (int i = 10; i < 16; ++i) {
-		wcout << hex << setw(2) << setfill(L'0') << uuid[i];
-	} */
 
 	system("PAUSE");
 	return 0;

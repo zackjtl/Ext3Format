@@ -4,15 +4,16 @@
 #include "BaseTypes.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 namespace myuuid {
-	uint16 swap_int16(uint16 val)
+	static uint16 swap_int16(uint16 val)
 	{
 			return (val << 8) | ((val >> 8) & 0xFF);
 	}
 }
 
-void gen_uuid_v4(byte* uuid, uint32 BufferLen)
+static void gen_uuid_v4(byte* uuid, uint32 BufferLen)
 {
   if (BufferLen < 16) {
     return;

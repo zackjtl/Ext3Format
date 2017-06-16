@@ -24,8 +24,10 @@ public:
 	dword ReadCapacity();
   void  ReadSector(dword Address, uint SectorCount, byte* OutBuf);
 	void  WriteSector(dword Address, uint SectorCount, byte* InBuf);
+  #ifndef __GNUC__
   void  ReadSectorFast(dword Address, uint SectorCount, byte* OutBuf);
 	void  WriteSectorFast(dword Address, uint SectorCount, byte* InBuf);
+  #endif
 	void  WaitForDiskReady(uint Timeout);
 	HANDLE GetHandle();
 	bool  GetLockStatus();

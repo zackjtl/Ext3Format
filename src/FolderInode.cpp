@@ -4,7 +4,11 @@
 #include "TypeConv.h"
 #include "GlobalDef.h"
 #include <time.h>
+#include <vector>
 #include <cassert>
+#include <cstring>
+
+using namespace std;
 //---------------------------------------------------------------------------
 CFolderInode::CFolderInode(uint16 BlockSize)
   : CInode(LINUX_S_IFDIR, BlockSize),

@@ -39,7 +39,7 @@ typedef struct _OVERLAPPED {
   HANDLE    hEvent;
 } OVERLAPPED, *LPOVERLAPPED;
 //---------------------------------------------------------------------------
-namespace my_io_base
+namespace scsi_base
 {
   /*
     *   The device handle open that the openning behavior depands on the OS.

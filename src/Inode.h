@@ -30,14 +30,15 @@ public:
 
   uint32 GetLastRealBlock();
 
+  int WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length);
+  virtual void UpdateInodeTable();
+
 #ifdef _TEST_
 public:	/* Public for testing. */
 #else
 protected:
 #endif
-
-	int WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length);
-
+	
 	uint32 alloc_blocks(CBlockManager& BlockMan, uint32 RequireBlock);
 	uint32 alloc_dir_blocks(CBlockManager& BlockMan, uint32 RequireBlocks);
 	uint32 alloc_indr_blocks(CBlockManager& BlockMan, uint32 RequireBlocks);
@@ -51,7 +52,7 @@ protected:
 
 	bool IndexToRealBlock(uint32 Index, uint32& Real);
 	uint32 CalcLeafCount();
-	void GetLeafBlocks(vector<uint32>&	Blocks);
+	void GetLeafBlocks(std::vector<uint32>&	Blocks);
 
 	void UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 													uint32 NewCount, uint8 Layer);
@@ -59,8 +60,6 @@ protected:
   void ValidateDirectLink(CBlockManager& BlockMan);
 	void ValidateIndirectLink(CBlockManager& BlockMan);
 	void ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix);
-
-  virtual void UpdateInodeTable();
 
 public:
 	TInode		Inode;
@@ -79,10 +78,10 @@ public:
 protected:
 #endif
 
-	vector<uint32>  Direct;
-	vector<uint32>	Indirect;
-	CIndrMatrix   	DIndirect;
-	CIndrMatrix			TIndirect;
+  std::vector<uint32>   Direct;
+  std::vector<uint32>	  Indirect;
+	CIndrMatrix   	      DIndirect;
+	CIndrMatrix			      TIndirect;
 
   const uint32        IndirectBlockThreshold;
   const uint32        DIndirectBlockThreshold;

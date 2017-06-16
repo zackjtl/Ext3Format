@@ -6,6 +6,7 @@
 #include "TypeConv.h"
 #include "GlobalDef.h"
 #include <time.h>
+#include <cstring>
 //---------------------------------------------------------------------------
 
 CResizeInode::CResizeInode(uint16 BlockSize)

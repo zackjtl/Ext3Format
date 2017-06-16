@@ -4,6 +4,7 @@
 #include "BlockManager.h"
 #include "BaseError.h"
 #include <algorithm>
+#include <cstring>
 //---------------------------------------------------------------------------
 /*
  * 	Auto allocate an amount of blocks, push the blocks into the input vector,

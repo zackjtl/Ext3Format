@@ -3,6 +3,7 @@
 #define KeyValuePrinterH
 //---------------------------------------------------------------------------
 #include <string>
+#include <stdio.h>
 #include "BaseTypes.h"
 using namespace std;
 //---------------------------------------------------------------------------
@@ -50,11 +51,10 @@ private:
 #define _CAT(x, y) x##y
 #define _SIZEOF(x) (sizeof(_FIELD(x)))
 #define _LENOF(x) (_SIZEOF(x) / sizeof(_FIELD(x)[0]))
-#define _FIELD(x) (TABLE_NAME.##x)
+#define _FIELD(x) (TABLE_NAME.x)
 #ifndef endl
-	#define endl L"\r\n"
+////static const wchar_t endl[] = L"\r\n";
 #endif
-#define SPACE_LEN 30
 
 #define disphex(x) { text << spaces << setw(SPACE_LEN) << setfill(L' ') << left << #x \
 													<< L"= 0x" << setw(_SIZEOF(x)*2) << setfill(L'0') << right << hex \

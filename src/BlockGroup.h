@@ -3,7 +3,6 @@
 
 #include "Tables.h"
 #include "Ext2Params.h"
-#include "BitArray.h"
 #include "BlockManager.h"
 #include "Inode.h"
 #include <string>

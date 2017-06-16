@@ -16,7 +16,7 @@ public:
 	std::wstring  name;
 } test_case;
 
-void assert_equal(uint32 Lhs, uint32 Rhs, int Line, const string& File, const string& Function)
+static void assert_equal(uint32 Lhs, uint32 Rhs, int Line, const string& File, const string& Function)
 {
 	if (Lhs != Rhs) {
 		wstring info = L", Line =" + IntegerToWideString(Line) +
@@ -31,7 +31,7 @@ void assert_equal(uint32 Lhs, uint32 Rhs, int Line, const string& File, const st
 	}
 }
 
-void assert_non_equal(uint32 Lhs, uint32 Rhs, int Line, const string& File, const string& Function)
+static void assert_non_equal(uint32 Lhs, uint32 Rhs, int Line, const string& File, const string& Function)
 {
 	if (Lhs == Rhs) {
 		wstring info = L", Line =" + IntegerToWideString(Line) +

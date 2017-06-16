@@ -10,6 +10,7 @@
 #include "NTDDSCSI.H"
 #include <winioctl.h>
 #include <Winternl.h>
+#include "scsi_windows.h"
 #else
 #define  SCSI_IOCTL_DATA_IN 1
 #define  SCSI_IOCTL_DATA_OUT 0
@@ -19,13 +20,15 @@
 #define  SCSIOP_READ_CAPACITY 0x25
 #define  SCSIOP_READ          0x28
 #define  SCSIOP_WRITE         0x2A
+
+#include "scsi_gnuc.h"
+
 #endif
 
 #include "UsbDrive.h"
 #include "TypeConv.h"
 #include "VolumeLock.h"
 #include "USBError.h"
-#include "scsi_windows.h"
 using namespace scsi_base;
 //---------------------------------------------------------------------------
 template <typename T> T SwapBytes(T Value);
@@ -226,6 +229,7 @@ void CUsbDrive::WriteSector(dword Address, uint SectorCount, byte* InBuf)
   tracer_msg(L"\r\n SCSI: Status: Success");
 }
 //---------------------------------------------------------------------------
+#ifndef __GNUC__
 void CUsbDrive::ReadSectorFast(dword Address, uint SectorCount, byte* OutBuff)
 {
   int ret;
@@ -271,6 +275,7 @@ void CUsbDrive::WriteSectorFast(dword Address, uint SectorCount, byte* InBuf)
 
   ret  = WriteFile(_DiskHandle, (LPVOID) InBuf, (DWORD) SectorCount * 512, &written, NULL);
 }
+#endif
 //---------------------------------------------------------------------------
 void CUsbDrive::WaitForDiskReady(uint Timeout)
 {

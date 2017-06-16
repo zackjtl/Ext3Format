@@ -7,6 +7,7 @@
 #include "TypeConv.h"
 #include <cassert>
 #include <time.h>
+#include <cstring>
 
 CInode* CInode::Create(uint32 Type, uint16 BlockSize)
 {

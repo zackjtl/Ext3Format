@@ -1,7 +1,7 @@
 #include "JournalSpWrapper.h"
 #include "TypeConv.h"
 #include "KeyValuePrinter.h"
-#include <string>
+#include <cstring>
 
 using namespace std;
 
@@ -85,8 +85,8 @@ wstring CJournalSpWrapper::ToString(uint Indent)
   wstring               spaces(Indent, L' ');
   CKeyValuePrinter  		printer(40);
 
-	#define TABLE_NAME	_JournalSp
-	#define	SPACE_LEN		40
+	#define TABLE_NAME	_JournalSp	
+  #define	SPACE_LEN		40
 
 	dispdec(Header.Signature);
 	dispdec(Header.BlockType);
@@ -118,5 +118,8 @@ wstring CJournalSpWrapper::ToString(uint Indent)
   disparr(User_ID);  
 
   return text.str();
+
+  #undef TABLE_NAME
+  #undef SPACE_LEN
 }
 

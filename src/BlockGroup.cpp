@@ -5,6 +5,8 @@
 #include "Inode.h"
 #include <cassert>
 #include <algorithm>
+#include <cstring>
+#include <stddef.h>
 
 CBlockGroup::CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, CBlockManager& BlockMan)
   : _GroupId(Index),

@@ -1,2 +1,2 @@
 # Ext3Format
-1. The files in test folder, the self-test program of this project, is now available with c++ builder only.
+1. The test project is now available for both gcc compiler and c++ builder.

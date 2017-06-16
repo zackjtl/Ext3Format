@@ -1,6 +1,7 @@
 #include "SuperBlockWrapper.h"
 #include "TypeConv.h"
 #include "KeyValuePrinter.h"
+#include <cstring>
 
 CSuperBlockWrapper::CSuperBlockWrapper()
 {
@@ -167,5 +168,8 @@ wstring CSuperBlockWrapper::ToString(uint Indent)
 	dispdec(FreeBlockCountHi);
 
   return text.str();
+
+  #undef TABLE_NAME
+  #undef SPACE_LEN
 }
 
