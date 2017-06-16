@@ -821,7 +821,7 @@ void CreateFolder(const wstring& Dir)
     }
 #else
   if (!DirectoryExists(Dir.c_str())) {
-    CreateDirectory(Dir.c_str(), NULL);
+    CreateDirectoryW(Dir.c_str(), NULL);
   }
 #endif
 }

@@ -18,7 +18,7 @@ void CDiskVolumn::Refresh()
 {
 	_IsVolumnMounted = GetVolumnMounted();
 #ifndef __GNUC__
-	_GetFreeSpaceSuccessed = GetDiskFreeSpaceEx(_DriveName.c_str(),
+	_GetFreeSpaceSuccessed = GetDiskFreeSpaceExW(_DriveName.c_str(),
 																		(PULARGE_INTEGER)&_FreeBytesAvailable,
 																		(PULARGE_INTEGER)&_TotalBytes,
 																		(PULARGE_INTEGER)&_TotalFreeBytes);

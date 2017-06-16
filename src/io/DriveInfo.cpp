@@ -54,7 +54,7 @@ void CDriveInfo::Get()
 	if (_DriveName == L"") {
     return;
   }
-	_VolumnResult = GetVolumeInformation(
+	_VolumnResult = GetVolumeInformationW(
 											_DriveName.c_str(),
 											volumnName,
 											256,
@@ -92,7 +92,7 @@ void CDriveInfo::Get()
 			  usbDrive.ForceLockControl(false);
 			}
 
-			_SpaceResult = GetDiskFreeSpaceEx(_DriveName.c_str(),
+			_SpaceResult = GetDiskFreeSpaceExW(_DriveName.c_str(),
 																				(PULARGE_INTEGER)&_FreeBytesAvailable,
 																				(PULARGE_INTEGER)&_TotalBytes,
 																				(PULARGE_INTEGER)&_TotalFreeBytes);
