@@ -4,33 +4,40 @@
 #include "FileInode.h"
 #include "FolderInode.h"
 #include "my_uuid.h"
+#include "TypeConv.h"
+#include <cassert>
+#include <time.h>
 
-CInode* CInode::Create(uint16 Mode, uint32 Block_Size)
+CInode* CInode::Create(uint32 Type, uint16 BlockSize)
 {
-	// TODO: Return a new CInode object with the type specified by the input Mode.
-	if (EXT2_FT_DIR == Mode) {
-		return new CFolderInode(Block_Size);
+	// TODO: Return a new CInode object with the type specified by the input Type.
+	if (LINUX_S_IFDIR == Type) {
+		return new CFolderInode(BlockSize);
 	}
-	else if (EXT2_FT_REG_FILE == Mode) {
- 		return new CFileInode(Block_Size);
+	else if (LINUX_S_IFREG == Type) {
+ 		return new CFileInode(BlockSize);
 	}
+  else if (0 == Type) {
+    return new CInode(0, BlockSize);
+  }
 	else {
 		throw CError(L"Attempt to create a unknown type of inode failed");
 	}
 }
 
-CInode::CInode(uint16 Mode, uint32 Block_Size)
-	: Mode(Mode),
-		BlockSize(Block_Size),
-		AddrPerBlock(Block_Size / sizeof(uint32)),
+CInode::CInode(uint32 Type, uint16 BlockSize)
+	: Type(Type),
+		_BlockSize(BlockSize),
+		AddrPerBlock(BlockSize / sizeof(uint32)),
 		IndirectBlockThreshold(EXT2_NDIR_BLOCKS),
 		DIndirectBlockThreshold(EXT2_NDIR_BLOCKS + AddrPerBlock),
 		TIndirectBlockThreshold(DIndirectBlockThreshold + AddrPerBlock * AddrPerBlock),
 		_Index(0),
 		_GroupID(0),
-		Permissions(0),
+		Permissions(000),
 		_Name("")
 {
+  memset((byte*)&Inode, 0x00, sizeof(TInode));
 	_Position = 0;
 	_Size = 0;
 }
@@ -74,21 +81,25 @@ void CInode::SetName(const string& Name)
 	_Name = Name;
 }
 
+void CInode::SetPermissions(uint16 Value)
+{
+  Permissions = Value;
+}
 
 void CInode::UpdateInodeTable()
 {
-  Inode.Mode = (Mode << 12) + Permissions;
+  Inode.Mode = OctToDec(Type | Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = (uint32)_Size;
   Inode.SizeInBytesHi = _Size >> 32;
-	time((long*)&Inode.AccessTime);
+  Inode.AccessTime = GetPosixTime();
   Inode.InodeChangeTime = Inode.AccessTime;
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.SectorCount = (_Size + 511) / 512;
+  Inode.SectorCount = div_ceil(_Size, 512);
   Inode.FileFlags = 0;
-  Inode.HardLinkCnt = 1;  /* For regular file, this is always 1 */
+  Inode.HardLinkCnt = Type == LINUX_S_IFREG ? 1 : 0;
   Inode.OS_Dep1 = 0;
   Inode.FileVersion = 0;
   Inode.FragAddress = 0;
@@ -104,8 +115,8 @@ void CInode::UpdateInodeTable()
  */
 int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 {
-	uint32 blockPos = _Position / BlockSize;
-	uint32 headOffset = _Position % BlockSize;
+	uint32 blockPos = _Position / _BlockSize;
+	uint32 headOffset = _Position % _BlockSize;
 	uint32 remainBytes = Length;
 	uint32 bytesWritten = 0;
 	uint32 realBlock;
@@ -113,15 +124,15 @@ int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 	byte* ptr = Buffer;
 
 	/* The data position is in the latest final block that old written */
-	if ((headOffset > 0) && (headOffset < BlockSize)) {
+	if ((headOffset > 0) && (headOffset < _BlockSize)) {
 		if (!IndexToRealBlock(blockPos, realBlock)) {
 			if (alloc_blocks(BlockMan, 1) != 0) {
 				throw CError(L"Insufficient block to allocate or the inode is full");
 			}
 		}
 
-		bytesWritten = Length >= BlockSize ? (BlockSize - headOffset) : Length;
-		Bulk<byte> buffer(BlockSize);
+		bytesWritten = Length >= _BlockSize ? (_BlockSize - headOffset) : Length;
+		Bulk<byte> buffer(_BlockSize);
 
     BlockMan.GetSingleBlockData(realBlock, buffer, buffer.Size());
     memcpy(buffer.Data() + headOffset, Buffer, bytesWritten);
@@ -136,8 +147,8 @@ int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
   }
 
   /* Set data into middle block */
-  uint32 middleBlocks = remainBytes / BlockSize;
-  uint32 redundantBlock = remainBytes % BlockSize > 0 ? 1 : 0;
+  uint32 middleBlocks = remainBytes / _BlockSize;
+  uint32 redundantBlock = remainBytes % _BlockSize > 0 ? 1 : 0;
 
 	if (alloc_blocks(BlockMan, middleBlocks + redundantBlock) != 0) {
  		throw CError(L"Insufficient block to allocate or the inode is full");
@@ -147,12 +158,12 @@ int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 		if (!IndexToRealBlock(blockPos, realBlock)) {
 			throw CError(L"Unexpected response of IndexToReadBlock function");
 		}
-    BlockMan.SetSingleBlockData(realBlock, ptr, BlockSize);
+    BlockMan.SetSingleBlockData(realBlock, ptr, _BlockSize);
 
-    ptr += BlockSize;
-    remainBytes -= BlockSize;
-		_Position += BlockSize;
-		_Size += BlockSize;
+    ptr += _BlockSize;
+    remainBytes -= _BlockSize;
+		_Position += _BlockSize;
+		_Size += _BlockSize;
     ++blockPos;
 	}
 
@@ -163,8 +174,8 @@ int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 		if (!IndexToRealBlock(blockPos, realBlock)) {
 			throw CError(L"Unexpected response of IndexToReadBlock function");
 		}
-		Bulk<byte> tailBuffer(BlockSize);
-		memset(tailBuffer, 0x00, BlockSize);
+		Bulk<byte> tailBuffer(_BlockSize);
+		memset(tailBuffer, 0x00, _BlockSize);
 		memcpy(tailBuffer.Data(), ptr, remainBytes);
 		BlockMan.SetSingleBlockData(realBlock, tailBuffer, tailBuffer.Size());
 		_Position += remainBytes;
@@ -420,6 +431,17 @@ void CInode::UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 		}
 	}
 
+}
+
+uint32 CInode::GetLastRealBlock()
+{
+  int block_pos = CalcLeafCount() - 1;
+  uint32 real;
+
+  if (block_pos < 0 || (!IndexToRealBlock(block_pos, real))) {
+    throw CError(L"No blocks allocated for the inqured inode");    
+  }
+  return real;
 }
 
 void CInode::make_layer_curr_sizes(uint32 Sizes[3], CIndrMatrix& Matrix)

@@ -1,26 +1,27 @@
 //---------------------------------------------------------------------------
-#ifndef ResizeInodeH
-#define ResizeInodeH
+#ifndef JournalInodeH
+#define JournalInodeH
 //---------------------------------------------------------------------------
 #include "Inode.h"
-#include "BaseTypes.h"
+#include "BlockManager.h"
 #include "Ext2Params.h"
 #include "Tables.h"
 
-class CResizeInode : public CInode
+class CJournalInode : public CInode
 {
 public:
-  CResizeInode(uint16 BlockSize);
-
-  using CInode::WriteData;
+  CJournalInode(uint32 BlockSize);
+  ~CJournalInode();
 
   void WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
+  void InitJournalSuperBlock(TSuperBlock& Super, CExt2Params& Params);
   void UpdateInodeTable();
 
 private:
-  bool    _written;
-  uint32  _middle_block_cnt;
-};
 
+  uint32              _JournalSize;
+  TJournalSuperBlock  _JournalSp;
+
+};
 
 #endif

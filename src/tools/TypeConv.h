@@ -34,6 +34,12 @@ wstring IntegerToHexWideString(uint Value, uint Digits);
 string  Integer64ToHexString(int64 Value, uint Digits);
 wstring Integer64ToHexWideString(int64 Value, uint Digits);
 wstring DecimalStringToDolloarForm(const wstring& Text);
+uint    OctalStringToInteger(const string& Text);
+uint    OctalStringToInteger(const wstring& Text);
+uint    OctToDec(uint Oct);
+
+std::time_t GetPosixTime();
+
 wstring GetDateTimeString();
 
 void   SplitString(const string&    Source,
@@ -49,6 +55,7 @@ bool   IsDigit(const wstring& Text);
 bool   IsHexDigit(const string& Text);
 bool   IsHexDigit(const wstring& Text);
 bool   IsAsciiString(const wstring& Text);
+
 wstring EraseLineEnd(const wstring& Text);
 wstring ElapsedTimeMsToString(uint Ms);
 void CreateFolder(const wstring& Dir);

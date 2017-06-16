@@ -15,7 +15,7 @@ public:
 
 public:
 	static uint32 MBRSize;
-  static uint32 BlockSize;
+  static uint16 BlockSize;
   static uint32 InodeSize;
   static uint32 BlocksPerGroup;
   static uint32 InodeRatio;

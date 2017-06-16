@@ -212,6 +212,14 @@
             <DependentOn>..\src\io\VolumeLock.h</DependentOn>
             <BuildOrder>39</BuildOrder>
         </CppCompile>
+        <CppCompile Include="..\src\JournalInode.cpp">
+            <DependentOn>..\src\JournalInode.h</DependentOn>
+            <BuildOrder>42</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\src\JournalSpWrapper.cpp">
+            <DependentOn>..\src\JournalSpWrapper.h</DependentOn>
+            <BuildOrder>41</BuildOrder>
+        </CppCompile>
         <CppCompile Include="..\src\Pch.cpp">
             <DependentOn>..\src\Pch.h</DependentOn>
             <BuildOrder>33</BuildOrder>

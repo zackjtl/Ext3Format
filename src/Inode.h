@@ -12,9 +12,9 @@ typedef std::vector<std::vector<uint32> >		CIndrMatrix;
 class CInode
 {
 public:
-	static CInode* Create(uint16 Mode, uint32 BlockSize);
+	static CInode* Create(uint32 Type, uint16 BlockSize);
 
-	CInode(uint16 Mode, uint32 Block_Size);
+	CInode(uint32 Type, uint16 BlockSize);
 	~CInode();
 
 	uint64 GetSize();
@@ -26,6 +26,9 @@ public:
 	void SetIndex(uint32 Index);
   void SetGroupID(uint16 GroupID);
 	void SetName(const std::string& Name);
+  void SetPermissions(uint16 Permissions);
+
+  uint32 GetLastRealBlock();
 
 #ifdef _TEST_
 public:	/* Public for testing. */
@@ -61,10 +64,12 @@ protected:
 
 public:
 	TInode		Inode;
-	uint16 		Mode;
+	uint32 		Type;  
   uint16    Permissions;
-  uint32    BlockSize;
+  uint16    _BlockSize;
 	uint32		AddrPerBlock;
+
+  ////std::string    Permissions;
 
   static const uint32 invalid_inode = 0xffffffff;  
 

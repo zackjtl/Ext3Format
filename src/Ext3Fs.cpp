@@ -4,7 +4,9 @@
 #include "Tables.h"
 #include "my_uuid.h"
 #include "ResizeInode.h"
+#include "JournalInode.h"
 #include "BaseError.h"
+#include "TypeConv.h"
 
 CExt3Fs::CExt3Fs(uint64 TotalSectors)
   : TotalSectors(TotalSectors),
@@ -28,6 +30,8 @@ void CExt3Fs::Create()
 	CreateRootDirectory();
 	CreateLostAndFoundDirectory();
   CreateResizeInode();
+  CreateJournalInode();
+  CreateSpecialInodes();
 
   /* Sync block bitmap and update group descriptors of each groups */
   UpdateBlockGroupsInfo();
@@ -78,30 +82,19 @@ void CExt3Fs::InitSuperBlock()
 
   memset((byte*)&Super.JournalUUID[0], 0, sizeof(Super.JournalUUID));
 
-  srand(time(NULL));
-
-  Super.HashSeed[0] = rand();
-  Super.HashSeed[1] = rand();
-  Super.HashSeed[2] = rand();
-	Super.HashSeed[3] = rand();
-
-  Super.DefaultHashVersion = 1;
-	Super.DefaultMountOptions = 12;
-
-	std::time_t timestamp = std::time(NULL);
-  Super.LastMountTime = 0;
-  Super.FsCreateTime = timestamp;
-
   /* TODO: Check how Inode size was decided ? */
-  Super.InodeSize = 256;
+  Super.InodeSize = 256;  
 
 	CalcInodeNumber();
 
   /* Basically is 32 */
   uint32 group_desc_size = sizeof(TGroupDesc); 
 
-  //Super.MountCnt = ?? 
+  Super.LastMountTime = 0;  
   Super.MaxMountCnt = 0xFFFF;
+  Super.MountCnt = 0;
+  Super.FileSysState = 1; /* ?? */
+  Super.BehaviorOnErr = 1; /* ?? */
 
   /* OS = Linux */
   Super.MaxTimeBetweenChecks = 0;
@@ -114,18 +107,40 @@ void CExt3Fs::InitSuperBlock()
   CalcReservedGdtBlocks();  
 
   /* Extended Super Block Section */
-	Super.FirstNonReservedInode = 11; //??
+	Super.FirstNonReservedInode = EXT2_GOOD_OLD_FIRST_INO; //??
   /* The super block's block */
   Super.SPIndex = Params.BlockSize <= 1024 ? 1 : 0;
 
   Super.CompFeatureFlags = 0;
   Super.CompFeatureFlags |= EXT2_FEATURE_COMPAT_RESIZE_INODE |
-                            EXT2_FEATURE_COMPAT_DIR_INDEX;
+                            EXT2_FEATURE_COMPAT_DIR_INDEX |
+                            EXT3_FEATURE_COMPAT_HAS_JOURNAL;
   Super.ROCompFeatureFlags = 0;
   Super.ROCompFeatureFlags |= EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER |
                               EXT2_FEATURE_RO_COMPAT_LARGE_FILE;
   Super.IncompFeatureFlags = 0;
   Super.IncompFeatureFlags |= EXT2_FEATURE_INCOMPAT_FILETYPE;
+
+  Super.AlgorithmUsageBmp = 0;
+  Super.BlocksPreAlloc = 0;
+  Super.DirBlocksPreAlloc = 0;  
+
+  Super.JournalInode = 0;
+  Super.JournalDevice = 0;
+  Super.LastOrphanedInode = 0;
+
+  Super.HashSeed[0] = rand();
+  Super.HashSeed[1] = rand();
+  Super.HashSeed[2] = rand();
+	Super.HashSeed[3] = rand();
+
+  Super.DefaultHashVersion = 1;
+	Super.DefaultMountOptions = 12;  
+
+  Super.FirstMetaBlockGroup = 0;
+  Super.FsCreateTime = GetPosixTime();
+
+  Super.JournalInode = EXT2_JOURNAL_INO;
 }
 
 /* 
@@ -190,8 +205,9 @@ void CExt3Fs::UpdateSuperBlock()
   }
   Super.FreeBlockCnt = freeBlocks;
   Super.FreeBlockCountHi = freeBlocks >> 32;
-  
-  time((long*)&Super.LastWriteTime);
+
+  Super.LastWriteTime = GetPosixTime();
+  Super.TimeOfLastCheck = GetPosixTime();
 }
 
 
@@ -314,10 +330,12 @@ void CExt3Fs::CalcInodeNumber()
 	 * the inode table blocks in the descriptor.  If not, add some
 	 * additional inodes/group.  Waste not, want not...
 	 */
-  uint32 rough_inodes = (Params.TotalBlocks / CExt2Params::InodeRatio) * CExt2Params::BlockSize;
-  uint32 inodes_per_group = div_ceil(rough_inodes, Params.GroupCount);    
+  uint32 rough_inodes = ((float)Params.TotalBlocks / CExt2Params::InodeRatio) * CExt2Params::BlockSize;
+  uint32 inodes_per_group = div_ceil(rough_inodes, Params.GroupCount);
+  uint32 inodes_per_block = CExt2Params::BlockSize / Super.InodeSize;
   InodeBlocksPerGroup = div_ceil(inodes_per_group * Super.InodeSize, CExt2Params::BlockSize);
-  inodes_per_group = (InodeBlocksPerGroup * CExt2Params::BlockSize) / Super.InodeSize;
+
+  inodes_per_group = inodes_per_block * InodeBlocksPerGroup;
 
 	/*
 	 * Finally, make sure the number of inodes per group is a
@@ -344,7 +362,7 @@ void CExt3Fs::CreateRootDirectory()
 {
 	CBlockGroup* bg0 = BlockGroups[0];
 
-	RootInode = (CFolderInode*)CInode::Create(EXT2_FT_DIR, Params.BlockSize);
+	RootInode = (CFolderInode*)CInode::Create(LINUX_S_IFDIR, Params.BlockSize);
 
 	if (!bg0->OccupyInodeNumber(RootInode, EXT2_ROOT_INO - 1)) {
 		throw CError(L"Allocate inode for root directory failed");
@@ -352,6 +370,7 @@ void CExt3Fs::CreateRootDirectory()
 	RootInode->SetIndex(1);
   RootInode->SetName("//");
   RootInode->MkDir(1, 1, *BlockMan.get(), Super);
+  RootInode->SetPermissions(755);
 }
 
 /* 
@@ -370,16 +389,34 @@ void CExt3Fs::CreateResizeInode()
 }
 
 /* 
+ *  Create journal inode
+ */
+void CExt3Fs::CreateJournalInode()
+{
+  CBlockGroup* gb0 = BlockGroups[0];
+  CJournalInode* inode = new CJournalInode(Params.BlockSize);
+
+  if (!gb0->OccupyInodeNumber(inode, EXT2_JOURNAL_INO - 1)) {
+    throw CError(L"Allocate journal inode failed");
+  }
+  inode->WriteData(*BlockMan.get(), Super, Params);
+
+  memcpy((byte*)&Super.JournalBlock[0], (byte*)&inode->Inode.Blocks[0], sizeof(inode->Inode.Blocks));
+}
+
+
+/* 
  *  Create lost+found directory
  */
 void CExt3Fs::CreateLostAndFoundDirectory()
 {
   CBlockGroup* gb0 = BlockGroups[0];
 
-	CInode* inode = gb0->AllocateNewInode(EXT2_FT_DIR);
+	CInode* inode = gb0->AllocateNewInode(LINUX_S_IFDIR);
 
 	inode->SetIndex(EXT2_GOOD_OLD_FIRST_INO - 1);
 	inode->SetName("lost+found");
+  inode->SetPermissions(700);
 
 	RootInode->Attach(inode, *BlockMan.get(), Super);
 
@@ -400,6 +437,33 @@ void CExt3Fs::CreateLostAndFoundDirectory()
 	}
 	inode->WriteData(*BlockMan.get(), buffer.Data(), buffer.Size());
 }
+
+
+/* 
+ *  Create the others special inodes
+ */
+void CExt3Fs::CreateSpecialInodes()
+{
+  CBlockGroup* gb0 = BlockGroups[0];
+
+  uint othersInodes = (EXT2_GOOD_OLD_FIRST_INO) - gb0->GetInodeCount();
+
+  uint currIdx = 0;
+
+  while (gb0->IsInodeExists(currIdx)) {
+    ++currIdx;
+  }
+
+  for (uint i = 0; i < othersInodes; ++i) {
+    CInode* inode = gb0->AllocateNewInode(0);
+    inode->SetIndex(currIdx);
+
+    while (gb0->IsInodeExists(currIdx)) {
+      ++currIdx;
+    }    
+  }
+}
+
 
 /*
  *	Real write file system into the storage.

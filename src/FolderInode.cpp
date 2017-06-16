@@ -1,10 +1,16 @@
 //---------------------------------------------------------------------------
 #pragma hdrstop
 #include "FolderInode.h"
+#include "TypeConv.h"
+#include "GlobalDef.h"
+#include <time.h>
+#include <cassert>
 //---------------------------------------------------------------------------
-CFolderInode::CFolderInode(uint32 BlockSize)
-  : CInode(EXT2_FT_DIR, BlockSize),
-    _Initialized(false)
+CFolderInode::CFolderInode(uint16 BlockSize)
+  : CInode(LINUX_S_IFDIR, BlockSize),
+    _Initialized(false),
+    _LastEntryOffset(0),
+    _LastEntryBlock(0)
 {
 	_DotInode = 0;
 	_TwoDotInode = 0;
@@ -26,38 +32,126 @@ void CFolderInode::MkDir(uint32 DotInode, uint32 TwoDotInode, CBlockManager& Blo
 	_DotInode = DotInode;
 	_TwoDotInode = TwoDotInode;
 
-	ext2_dir_entry 	dot_ent;
-	MakeEntry(dot_ent, DotInode, EXT2_FT_DIR, " .", Super);
-	this->WriteData(BlockMan, (byte*)&dot_ent, dot_ent.rec_len);
+  if (alloc_blocks(BlockMan, 1) != 0) {
+    throw CError(L"Allocate block for directory failed");
+  }
+  uint32 lastBlock = GetLastRealBlock();
+  uint32 real_len;
+  Bulk<byte>* buffer = BlockMan.CreateSingleBlockDataBuffer(lastBlock);
+  byte* ptr = buffer->Data();
 
-	ext2_dir_entry 	two_dot_ent;
-	MakeEntry(two_dot_ent, TwoDotInode, EXT2_FT_DIR, "..", Super);
-	this->WriteData(BlockMan, (byte*)&two_dot_ent, two_dot_ent.rec_len);
+  memset(buffer->Data(), 0x00, buffer->Size());
 
+	ext2_dir_entry 	dotEntry;
+	MakeEntry(dotEntry, DotInode, EXT2_FT_DIR, ".", Super);
+  memcpy(ptr, (byte*)&dotEntry, dotEntry.rec_len);
+
+  ptr += dotEntry.rec_len;
+
+	ext2_dir_entry 	twoDotEntry;
+	MakeEntry(twoDotEntry, TwoDotInode, EXT2_FT_DIR, "..", Super);
+
+  _LastEntryOffset = dotEntry.rec_len;
+  real_len = twoDotEntry.rec_len;
+  twoDotEntry.rec_len = _BlockSize - dotEntry.rec_len;
+
+  memcpy(ptr, (byte*)&twoDotEntry, real_len);
+
+  _Size = _BlockSize;
+  _Position = _BlockSize;
 	_Initialized = true;
+}
+
+#define filetype_en() (Super.IncompFeatureFlags & EXT2_FEATURE_INCOMPAT_FILETYPE)
+
+/* To calculate the real entry size instead the rec_len variable. */
+#define real_entry_len(x) (10 + (x->name_len & (filetype_en() ? 0x0f : 0xff )))
+
+/* Convert inode type to the file type of the entry */
+#define get_file_type(x) (x == LINUX_S_IFDIR ? EXT2_FT_DIR : EXT2_FT_REG_FILE)
+
+/*
+ * 	Attach a sub folder or file inode on this inode
+ */
+void CFolderInode::Attach(CInode* Inode, CBlockManager& BlockMan,
+                          TSuperBlock& Super)
+{
+	if (Inode->Type == LINUX_S_IFDIR) {
+		CFolderInode* folder = (CFolderInode*)Inode;
+		folder->MkDir(this->GetIndex(), _DotInode, BlockMan, Super);
+	}
+	ext2_dir_entry  entry;
+  uint8 file_type = get_file_type(Inode->Type);
+	MakeEntry(entry, Inode->GetIndex(), file_type, Inode->GetName().c_str(), Super);
+
+	_NameList.insert(make_pair(Inode->GetName(), Inode->GetIndex()));
+	////this->WriteData(BlockMan, (byte*)&entry, entry.rec_len);
+
+  AddEntry(entry, BlockMan, Super);
 }
 
 /*
  * 	Attach a sub folder or file inode on this inode
  */
-void CFolderInode::Attach(CInode* Inode, CBlockManager& BlockMan, TSuperBlock& Super)
+void CFolderInode::AddEntry(ext2_dir_entry& Entry, CBlockManager& BlockMan,
+                            TSuperBlock& Super)
 {
-	if (Inode->Mode == EXT2_FT_DIR) {
-		CFolderInode* folder = (CFolderInode*)Inode;
-		folder->MkDir(this->GetIndex(), _DotInode, BlockMan, Super);
-	}
-	ext2_dir_entry  entry;
-	MakeEntry(entry, Inode->GetIndex(), Inode->Mode, Inode->GetName().c_str(), Super);
+  uint32 lastBlock = GetLastRealBlock();
+  uint32 real_rec_len;
+  uint32 remain_len;
+  byte* ptr;
+  ext2_dir_entry* pEntry;
+  
+  Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(lastBlock);
 
-	_NameList.insert(make_pair(Inode->GetName(), Inode->GetIndex()));
-	this->WriteData(BlockMan, (byte*)&entry, entry.rec_len);
+  if (_Size == 0 || buffer == NULL) {
+    goto NEW_ALLOC_BLOCK;
+  }
+
+  ptr = buffer->Data() + _LastEntryOffset;
+  pEntry = (ext2_dir_entry*)ptr;
+
+  real_rec_len = real_entry_len(pEntry);
+
+  /* replace the record length by the realize  */
+  pEntry->rec_len = real_rec_len;
+  ptr += real_rec_len;  
+
+  if ((_LastEntryOffset + real_rec_len + Entry.rec_len) > _BlockSize) {
+    goto NEW_ALLOC_BLOCK;
+  }
+  /* replace the last entry's record length by the remain length */
+  remain_len = _BlockSize - (_LastEntryOffset + real_rec_len);
+  real_rec_len = Entry.rec_len;
+  Entry.rec_len = remain_len;  
+  
+  memcpy(ptr, (byte*)&Entry, real_rec_len);
+  return;
+
+NEW_ALLOC_BLOCK:
+
+  if (alloc_blocks(BlockMan, 1) != 0) {
+    throw CError(L"Allocate block for directory failed");
+  }
+  lastBlock = GetLastRealBlock();
+
+  buffer = BlockMan.CreateSingleBlockDataBuffer(lastBlock);
+  real_rec_len = Entry.rec_len;
+  Entry.rec_len = _BlockSize;
+
+  memset(buffer->Data(), 0x00, buffer->Size());
+  memcpy(buffer->Data(), (byte*)&Entry, real_rec_len);    
+  _Position += _BlockSize;
+  _Size += _BlockSize;
+  _LastEntryOffset = 0;     
+  return;    
 }
 
 /*
  * 	Specific the entry's name if the argument Name is a non-null string,
  *  or use the inode's original name.
  */
-void CFolderInode::MakeEntry(ext2_dir_entry& Entry, uint32 InodeNo, uint16 Mode,
+void CFolderInode::MakeEntry(ext2_dir_entry& Entry, uint32 InodeNo, uint8 FileType,
 															const char* Name, TSuperBlock& Super)
 {
 	uint16 nameLen = Name == NULL ? 0 : strlen((char*)Name);
@@ -67,8 +161,11 @@ void CFolderInode::MakeEntry(ext2_dir_entry& Entry, uint32 InodeNo, uint16 Mode,
 	Entry.rec_len = 8 + nameLen + 2;
 	Entry.name_len = nameLen;
 
+  if (Entry.rec_len < 12) {
+    Entry.rec_len = 12;
+  }
 	if (Super.IncompFeatureFlags & EXT2_FEATURE_INCOMPAT_FILETYPE) {
-		Entry.name_len |= (Mode & 0x7) << 8;
+		Entry.name_len |= (FileType & 0x7) << 8;
 	}
 	memset(Entry.name, 0, sizeof((char*)Entry.name));
 	strcpy(Entry.name, (char*)Name);
@@ -76,17 +173,16 @@ void CFolderInode::MakeEntry(ext2_dir_entry& Entry, uint32 InodeNo, uint16 Mode,
                               
 void CFolderInode::UpdateInodeTable()
 {
-  Inode.Mode = (Mode << 12) + Permissions;
+  Inode.Mode = OctToDec(Type + Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = (uint32)_Size;
   Inode.SizeInBytesHi = _Size >> 32;
-  time((long*)&Inode.AccessTime);
+  Inode.AccessTime = GetPosixTime();
   Inode.InodeChangeTime = Inode.AccessTime;
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.HardLinkCnt = 0;
-  Inode.SectorCount = _Size / 512;
+  Inode.SectorCount = div_ceil(_Size, 512);
   Inode.FileFlags = 0;
   Inode.HardLinkCnt = _NameList.size();  /* For directory, this is the sub item number */
   Inode.OS_Dep1 = 0;
@@ -95,5 +191,6 @@ void CFolderInode::UpdateInodeTable()
   Inode.FragNumber = 0;
   Inode.FragSize = 0;
   Inode.Padding = 0;
+
   memset((byte*)&Inode.Rsvd[0], 0, sizeof(Inode.Rsvd));
 }

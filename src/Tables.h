@@ -12,24 +12,6 @@
 #define EXT2_TIND_BLOCK			(EXT2_DIND_BLOCK + 1)
 #define EXT2_N_BLOCKS			  (EXT2_TIND_BLOCK + 1)
 
-/*
- * Special inode numbers
- */
-#define EXT2_BAD_INO		 1	/* Bad blocks inode */
-#define EXT2_ROOT_INO		 2	/* Root inode */
-#define EXT4_USR_QUOTA_INO	 3	/* User quota inode */
-#define EXT4_GRP_QUOTA_INO	 4	/* Group quota inode */
-#define EXT2_BOOT_LOADER_INO	 5	/* Boot loader inode */
-#define EXT2_UNDEL_DIR_INO	 6	/* Undelete directory inode */
-#define EXT2_RESIZE_INO		 7	/* Reserved group descriptors inode */
-#define EXT2_JOURNAL_INO	 8	/* Journal inode */
-#define EXT2_EXCLUDE_INO	 9	/* The "exclude" inode, for snapshots */
-#define EXT4_REPLICA_INO	10	/* Used by non-upstream feature */
-
-/* First non-reserved inode for old ext2 filesystems */
-#define EXT2_GOOD_OLD_FIRST_INO	11
-
-
 #define JFS_MAGIC_NUMBER 0xc03b3998U /* The first 4 bytes of /dev/random! */
 
 #pragma pack(push) /* push current alignment to stack */
@@ -252,14 +234,51 @@ typedef struct ext2_inode {
  */
 #define EXT2_FT_UNKNOWN		0
 #define EXT2_FT_REG_FILE	1
-#define EXT2_FT_DIR		2
+#define EXT2_FT_DIR		    2
 #define EXT2_FT_CHRDEV		3
 #define EXT2_FT_BLKDEV		4
-#define EXT2_FT_FIFO		5
-#define EXT2_FT_SOCK		6
+#define EXT2_FT_FIFO		  5
+#define EXT2_FT_SOCK		  6
 #define EXT2_FT_SYMLINK		7
 
-#define EXT2_FT_MAX		8
+#define EXT2_FT_MAX		    8
+
+
+/*
+ * Special inode numbers
+ */
+#define EXT2_BAD_INO		 1	/* Bad blocks inode */
+#define EXT2_ROOT_INO		 2	/* Root inode */
+#define EXT4_USR_QUOTA_INO	 3	/* User quota inode */
+#define EXT4_GRP_QUOTA_INO	 4	/* Group quota inode */
+#define EXT2_BOOT_LOADER_INO	 5	/* Boot loader inode */
+#define EXT2_UNDEL_DIR_INO	 6	/* Undelete directory inode */
+#define EXT2_RESIZE_INO		 7	/* Reserved group descriptors inode */
+#define EXT2_JOURNAL_INO	 8	/* Journal inode */
+#define EXT2_EXCLUDE_INO	 9	/* The "exclude" inode, for snapshots */
+#define EXT4_REPLICA_INO	10	/* Used by non-upstream feature */
+
+/* First non-reserved inode for old ext2 filesystems */
+#define EXT2_GOOD_OLD_FIRST_INO	11
+
+/*
+ * Ext2/linux mode flags.  We define them here so that we don't need
+ * to depend on the OS's sys/stat.h, since we may be compiling on a
+ * non-Linux system.
+ */
+
+#define LINUX_S_IFMT  170000
+#define LINUX_S_IFSOCK 140000
+#define LINUX_S_IFLNK	 120000
+#define LINUX_S_IFREG  100000
+#define LINUX_S_IFBLK  60000
+#define LINUX_S_IFDIR  40000
+#define LINUX_S_IFCHR  20000
+#define LINUX_S_IFIFO  10000
+#define LINUX_S_ISUID  4000
+#define LINUX_S_ISGID  2000
+#define LINUX_S_ISVTX  1000
+
 
 /*
  * Structure of a directory entry
@@ -280,6 +299,27 @@ struct ext2_dir_entry {
 #define JFS_SUPERBLOCK_V2	4
 #define JFS_REVOKE_BLOCK	5
 
+
+/* Definitions for the journal tag flags word: */
+#define JFS_FLAG_ESCAPE		1	/* on-disk block is escaped */
+#define JFS_FLAG_SAME_UUID	2	/* block has same uuid as previous */
+#define JFS_FLAG_DELETED	4	/* block deleted by this transaction */
+#define JFS_FLAG_LAST_TAG	8	/* last tag in this descriptor block */
+
+
+#define UUID_SIZE 16
+#define JFS_USERS_MAX 48
+#define JFS_USERS_SIZE (UUID_SIZE * JFS_USERS_MAX)
+
+#define JFS_FEATURE_COMPAT_CHECKSUM		0x00000001
+
+#define JFS_FEATURE_INCOMPAT_REVOKE		0x00000001
+#define JFS_FEATURE_INCOMPAT_64BIT		0x00000002
+#define JFS_FEATURE_INCOMPAT_ASYNC_COMMIT	0x00000004
+#define JFS_FEATURE_INCOMPAT_CSUM_V2		0x00000008
+#define JFS_FEATURE_INCOMPAT_CSUM_V3		0x00000010
+
+
 /*
  * Standard header for all descriptor blocks:
  */
@@ -295,7 +335,7 @@ typedef struct journal_header_s
  */
 typedef struct journal_superblock_s
 {
-	JournalHeader s_header;
+	JournalHeader Header;
 
 	/* Static information describing the journal */
 	uint32		BlockSize;	/* journal device blocksize */
@@ -305,6 +345,36 @@ typedef struct journal_superblock_s
 	/* Dynamic information describing the current state of the log */
 	uint32		SequenceOf1stTrans;	/* first commit ID expected in log */
 	uint32		BlockOf1stTrans;	/* blocknr of start of log */
+	
+	/* 0x0020 */
+	/* Error value, as set by journal_abort(). */
+	uint32		Error;
+
+	/* 0x0024 */
+	/* Remaining fields are only valid in a version-2 superblock */	
+	uint32		CompFeatureFlags;
+	uint32		IncompFeatureFlags;
+	uint32		ROCompFeatureFlags;
+	
+	/* 0x0030 */
+	uint8			UUID[UUID_SIZE];
+	
+	/* 0x0040 */
+	uint32		Users;
+	uint32		BlocksOfDynamicSBCopy;
+	
+	/* 0x0048 */
+	uint32		MaxTransaction;
+	uint32		MaxTransactionBlocks;
+	
+	/* 0x0050 */
+	uint8			ChecksumType;
+	uint8			Padding2[3];
+	uint32		Padding[42];	
+	uint32		Checksum;								/* crc32c(superblock) */
+	
+	/* 0x0100 */
+	uint8			User_ID[JFS_USERS_SIZE];	/* ids of all fs'es sharing the log */
 } TJournalSuperBlock;
 
 #pragma pack(pop) /* restore original alignment from stack */

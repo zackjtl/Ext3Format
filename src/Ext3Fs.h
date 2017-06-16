@@ -31,7 +31,9 @@ private:
 
   void CreateRootDirectory();
 	void CreateResizeInode();
+  void CreateJournalInode();
 	void CreateLostAndFoundDirectory();
+  void CreateSpecialInodes();
   
   void UpdateBlockGroupsInfo();
   void UpdateInodeTables();

@@ -8,6 +8,7 @@
 #include "Inode.h"
 #include <string>
 #include <vector>
+#include <map>
 
 class CBlockGroup
 {
@@ -22,11 +23,13 @@ public:
   
   void OccupyFileSystemBlocks();
   uint GetStartInodeIndex();  
+  uint GetInodeCount();
+  bool IsInodeExists(uint32 Inode);
 
   /* Acquire inode from this group */
   bool HaveFreeInode();
   bool HaveSuperBlockBackup();
-  CInode* AllocateNewInode(uint8 Type);
+  CInode* AllocateNewInode(uint32 Type);
   bool OccupyInodeNumber(CInode* Inode, uint32 InodeNumber);    
 
   std::vector<byte>& GetBlockBmp();
@@ -44,6 +47,8 @@ public:
 
 public:
   static bool bg_has_super(TSuperBlock& Super, uint32 GroupIndex);
+
+  typedef struct std::map<uint32, CInode* >  inode_map;
 
 private:
   
@@ -65,9 +70,8 @@ private:
 
   std::vector<byte>     _BlockBmp;
   std::vector<byte>     _InodeBmp;
-  std::vector<CInode*>  _InodeList;
+  inode_map             _InodeMap;
 };
-
 static int test_root(uint32 a, uint32 b);
 
 

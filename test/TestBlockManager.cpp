@@ -3,6 +3,7 @@
 #include "TestBlockManager.h"
 #include "BlockManager.h"
 #include "BaseError.h"
+#include <algorithm>
 //---------------------------------------------------------------------------
 /*
  * 	Auto allocate an amount of blocks, push the blocks into the input vector,
@@ -322,7 +323,7 @@ void TestBlockOverwrite()
 	man.SetBlockData(blocks, dataBuffW.Data() + 4096, 4096 * 3);
 
 	blocks.push_back(10);
-	sort(blocks.begin(), blocks.end());
+	std::sort(blocks.begin(), blocks.end());
 
 	man.GetBlockData(blocks, dataBuffR.Data(), 4096 * 4);
 

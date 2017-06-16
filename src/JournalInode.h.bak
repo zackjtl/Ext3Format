@@ -1,0 +1,19 @@
+//---------------------------------------------------------------------------
+#ifndef JournalInode
+#define JournalInode
+//---------------------------------------------------------------------------
+#include "Inode.h"
+#include "BlockManager.h"
+
+class CJournalInode : public CInode
+{
+public:
+  CJournalInode(uint32 BlockSize);
+  ~CJournalInode();
+
+
+private:
+
+};
+
+#endif

@@ -3,6 +3,8 @@
 #include "GlobalDef.h"
 #include "BaseError.h"
 #include "Inode.h"
+#include <cassert>
+#include <algorithm>
 
 CBlockGroup::CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, CBlockManager& BlockMan)
   : _GroupId(Index),
@@ -108,46 +110,80 @@ void CBlockGroup::UpdateGroupInfo(CBlockManager& BlockMan)
       --Desc.FreeBlockCount; 
     }
   }
+  inode_map::iterator it = _InodeMap.begin();
 
-  int inodeCnt = _InodeList.size();
+  while (it != _InodeMap.end()) {
+    it->second->GetIndex();
 
-  for (int i = 0; i < inodeCnt; ++i)
-    if (_InodeList[i]->Mode == EXT2_FT_DIR)       
-      ++Desc.DirectoriesCount;  
+    if (it->second->Type == LINUX_S_IFDIR)
+      ++Desc.DirectoriesCount;
+    ++it;
+  }
 }
 
 void CBlockGroup::UpdateInodeTables()
 {
-	uint32 inodeCnt = _InodeList.size();
-  assert((inodeCnt + Desc.FreeInodeCount) == _Super.InodesPerGroup);
+  assert((_InodeMap.size() + Desc.FreeInodeCount) == _Super.InodesPerGroup);
 
-  for (uint32 i = 0; i < inodeCnt; ++i) {
-    _InodeList[i]->UpdateInodeTable();
+  inode_map::iterator it = _InodeMap.begin();
+
+  while (it != _InodeMap.end()) {
+    it->second->UpdateInodeTable();
+    ++it;
   }
 }
 
 /* Flush inode data into the inode blocks */
 void CBlockGroup::FlushInodeTables(CBlockManager& BlockMan)
 {
-	uint32 inodeCnt = _InodeList.size();
+  uint32 inodeCnt = _InodeMap.size();
 	uint32 flush_size = inodeCnt * _Super.InodeSize;
 	uint32 flush_blocks = div_ceil(flush_size, _Params.BlockSize);
+  uint32 mod_time_offset = offsetof(TInode, ModificationTime);
+  uint32 struct_size = sizeof(TInode);
+  bool   extend_struct = (_Params.BlockSize / 2) >= struct_size ? true : false;
 
-	assert((inodeCnt + Desc.FreeInodeCount) == _Super.InodesPerGroup);
-
+  assert((inodeCnt + Desc.FreeInodeCount) == _Super.InodesPerGroup);
+	
 	if (flush_blocks == 0) {
   	return;
 	}
-	Bulk<byte> buffer(flush_blocks * _Params.BlockSize);
-  memset(buffer.Data(), 0x00, buffer.Size());  
-  TInode* pInode = (TInode*)buffer.Data();
+  uint32 inodesPerBlock = _Params.BlockSize / _Super.InodeSize;
+  uint32 gbOffset = Desc.InodeTableBlock;
 
-  for (uint32 i = 0; i < inodeCnt; ++i) {
-    CInode* inode = _InodeList[i];
-    *pInode = inode->Inode;
-  }  
-  
-  BlockMan.SetBlockData(Desc.InodeTableBlock, buffer.Data(), buffer.Size());   
+  inode_map::iterator it = _InodeMap.begin();
+
+  while (it != _InodeMap.end()) {
+    CInode* inode = it->second;
+
+    uint32 block = gbOffset + inode->GetIndex() / inodesPerBlock;
+    uint32 offset = (inode->GetIndex() % inodesPerBlock) * _Super.InodeSize;
+
+    Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer(block);
+
+    if (buffer == NULL) {
+      /* The buffer of the block has not yet been created */
+      buffer = BlockMan.CreateSingleBlockDataBuffer(block);
+      memset(buffer->Data(), 0x00, buffer->Size());
+    }
+    byte* ptr = buffer->Data() + offset;
+
+    Bulk<byte> temp(_Super.InodeSize);
+    memset(temp.Data(), 0x00, temp.Size());
+    memcpy(temp.Data(), (byte*)(&inode->Inode), struct_size);
+
+    if (extend_struct) {    
+      uint32* pModTime1 = (uint32*)(temp.Data() + mod_time_offset);
+      uint32* pModTime2 = (uint32*)(temp.Data() + struct_size + mod_time_offset);
+      *pModTime2 = *pModTime1;
+    }
+    memcpy(ptr, temp.Data(), _Super.InodeSize);
+
+    //TInode* pInode = (TInode*)ptr;
+    //*pInode = inode->Inode;
+
+    ++it;
+  }
 }
 
 
@@ -205,6 +241,16 @@ uint CBlockGroup::GetStartInodeIndex()
   return _Super.InodesPerGroup * _GroupId;
 }
 
+uint CBlockGroup::GetInodeCount()
+{
+  return _InodeMap.size();
+}
+
+bool CBlockGroup::IsInodeExists(uint32 Inode)
+{
+  _InodeMap.find(Inode) == _InodeMap.end() ? false : true;
+}
+
 /* Have free inode to be allocated */
 bool CBlockGroup::HaveFreeInode()
 {
@@ -218,7 +264,7 @@ bool CBlockGroup::HaveSuperBlockBackup()
 }
 
 /* Acquire inode from this group */
-CInode* CBlockGroup::AllocateNewInode(uint8 Type)
+CInode* CBlockGroup::AllocateNewInode(uint32 Type)
 {
   if (Desc.FreeInodeCount == 0) {
     return NULL;
@@ -227,9 +273,12 @@ CInode* CBlockGroup::AllocateNewInode(uint8 Type)
   for (uint32 i = 0; i < _Super.InodesPerGroup; ++i) {
     if (!inode_used(i)) {
       CInode* inode = CInode::Create(Type, _Params.BlockSize);
-      _InodeList.push_back(inode);    
+      uint32 index = _GroupId * _Super.InodesPerGroup + i;
+
+      _InodeMap.insert(make_pair(index, inode));
+
       --Desc.FreeInodeCount;
-      inode->SetIndex(_GroupId * _Super.InodesPerGroup + i);
+      inode->SetIndex(index);
       inode->SetGroupID(_GroupId);
       set_inode_used(i);
       return inode;
@@ -244,8 +293,8 @@ bool CBlockGroup::OccupyInodeNumber(CInode* Inode, uint32 InodeNo)
   if (inode_used(InodeNo)) {
     //throw CError(L"The indicated inode has been occupied.");
     return false;
-  } 
-  _InodeList.push_back(Inode);
+  }
+  _InodeMap.insert(make_pair(InodeNo, Inode));
   --Desc.FreeInodeCount;
 	Inode->SetIndex(InodeNo);
 	Inode->SetGroupID(_GroupId);

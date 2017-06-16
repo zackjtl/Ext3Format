@@ -319,6 +319,68 @@ wstring DecimalStringToDolloarForm(const wstring& Text)
   return temp;
 }
 //---------------------------------------------------------------------------
+uint OctalStringToInteger(const string& Text)
+{
+  if (Text.empty()) {
+    throw CError(L"[ Error] : Can't convert empty string to integer.");
+  }
+   int            value;
+   istringstream  is(Text);
+
+  is >> oct >> ((uint&) value);
+
+  if (!is.good() && !is.eof()) {
+    wostringstream  os;
+    os << L"[Error] : Can't convert \""
+       << ToWideString(Text)
+       << L"\" to integer.";
+    throw CError(os.str());
+  }
+  return value;   
+}
+//---------------------------------------------------------------------------
+uint OctalStringToInteger(const wstring& Text)
+{
+  if (Text.empty()) {
+    throw CError(L"[ Error] : Can't convert empty string to integer.");
+  }
+  int             value;
+  wistringstream  is(Text);
+
+  is >> oct >> ((uint&) value);
+
+  if (!is.good() && !is.eof()) {
+    wostringstream  os;
+    os << L"[Error] : Can't convert \""
+       << Text
+       << L"\" to integer.";
+    throw CError(os.str());
+  }
+  return value;   
+}
+//---------------------------------------------------------------------------
+uint OctToDec(uint Oct)
+{
+  string strOct = IntegerToString(Oct);
+  return OctalStringToInteger(strOct);
+}
+//---------------------------------------------------------------------------
+std::time_t GetPosixTime()
+{
+  std::time_t base_time, local_time, gm_time;
+  struct tm* local_tm;
+  struct tm* gm_tm;
+  base_time   = time(NULL);
+  local_tm    = localtime(&base_time);
+  local_time  = mktime(local_tm);
+  gm_tm       = gmtime(&base_time);
+  gm_time     = mktime(gm_tm);
+
+  std::time_t diff = base_time - gm_time;
+
+  return base_time;//// + diff;
+}
+//---------------------------------------------------------------------------
 void SplitString(const string&    Source,
                  const string&    PartitionChar,
                  vector<string>&  OutBuf)

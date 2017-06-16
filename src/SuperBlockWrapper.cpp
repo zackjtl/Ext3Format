@@ -104,10 +104,10 @@ wstring CSuperBlockWrapper::ToString(uint Indent)
 {
 	wostringstream        text;
   wstring               spaces(Indent, L' ');
-  CKeyValuePrinter  		printer(30);
+  CKeyValuePrinter  		printer(40);
 
 	#define TABLE_NAME	_SuperBlock
-	#define	SPACE_LEN		30
+	#define	SPACE_LEN		40
 
 	dispdec(InodeCnt);
 	dispdec(BlockCnt);

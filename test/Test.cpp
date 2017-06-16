@@ -54,7 +54,7 @@ int _tmain(int argc, _TCHAR* argv[])
 									{ValidateDIndirectTable, L"Validate address table linking of d_indirect blocks"},
 									{ValidateTIndirectTable, L"Validate address table linking of t_indirect blocks"},
 									{show_caption, L"EXT3 File System Creation"},
-									{TestExt3Fs128GB, L"EXT3 File System with 128GB"},
+									//{TestExt3Fs128GB, L"EXT3 File System with 128GB"},
 									{TestExt3FsReadWrite, L"Test real format storage with ext3"}};
 
 

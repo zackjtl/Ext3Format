@@ -3,10 +3,13 @@
 #include "ResizeInode.h"
 #include "BaseError.h"
 #include "BlockGroup.h"
+#include "TypeConv.h"
+#include "GlobalDef.h"
+#include <time.h>
 //---------------------------------------------------------------------------
 
-CResizeInode::CResizeInode(uint32 Block_Size)
-  : CInode(EXT2_FT_REG_FILE, Block_Size),
+CResizeInode::CResizeInode(uint16 BlockSize)
+  : CInode(LINUX_S_IFREG, BlockSize),
     _written(false)
 {
   Permissions = 600;
@@ -44,7 +47,7 @@ void CResizeInode::WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2P
 
       _middle_block_cnt = 0;
 			DIndirect[0][i-1] = i;
-      Bulk<byte> buffer(BlockSize);
+      Bulk<byte> buffer(_BlockSize);
       memset(buffer.Data(), 0, buffer.Size());
       uint32* ptr = (uint32*)buffer.Data();
 
@@ -77,18 +80,18 @@ void CResizeInode::WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2P
 
 void CResizeInode::UpdateInodeTable()
 {
-  _Size = DIndirect[0].size() * _middle_block_cnt * BlockSize;
+  _Size = DIndirect[0].size() * _middle_block_cnt * _BlockSize;
 
-  Inode.Mode = (Mode << 12) + Permissions;
+  Inode.Mode = OctToDec(Type | Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = 4243456;
   Inode.SizeInBytesHi = 1;
-	time((long*)&Inode.AccessTime);
+  Inode.AccessTime = GetPosixTime();
   Inode.InodeChangeTime = Inode.AccessTime;
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.SectorCount = (_Size + 511) / 512;
+  Inode.SectorCount = div_ceil(_Size, 512);
   Inode.FileFlags = 0;
   Inode.HardLinkCnt = 1;  /* For regular file, this is always 1 */
   Inode.OS_Dep1 = 0;

@@ -19,7 +19,7 @@ void TestExt3Fs128GB()
 	assert_eq(super.RsvdGdtBlocks, 1016);
 }
 
-wstring driveName = L"\\\\.\\D:";
+wstring driveName = L"\\\\.\\K:";
 unique_ptr<CUsbDrive> drive;
 
 //---------------------------------------------------------------------------

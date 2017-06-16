@@ -3,7 +3,7 @@
 #include "GlobalDef.h"
 
 uint32 CExt2Params::MBRSize = 1024;
-uint32 CExt2Params::BlockSize = 4096;
+uint16 CExt2Params::BlockSize = 4096;
 uint32 CExt2Params::InodeSize = 256;
 uint32 CExt2Params::BlocksPerGroup = 32768;
 uint32 CExt2Params::InodeRatio = 16384;
