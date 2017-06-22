@@ -35,9 +35,9 @@ void PrintCapacity(uint32 Capacity);
   if (DeviceName == "") {
     printf("Not yet indicated device name, please input the device name:\n");
     cin >> DeviceName;
-    DeviceName = "\\\\.\\" + DeviceName;
+    DeviceName = "\\\\.\\" + DeviceName + ":";
   }
-  printf("Try to open handle of device %s\n", DeviceName);
+  printf("Try to open handle of device %s\n", DeviceName.c_str());
 
   wstring devName = ToWideString(DeviceName);
   unique_ptr<CUsbDrive> drive;
