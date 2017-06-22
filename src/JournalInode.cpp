@@ -11,6 +11,7 @@
 CJournalInode::CJournalInode(uint32 BlockSize)
   : CInode(LINUX_S_IFREG, BlockSize)
 {
+  Permissions = 600;
   _JournalSize = (uint32)128 << 20; // 128MB
 }
 
@@ -69,7 +70,7 @@ void CJournalInode::InitJournalSuperBlock(TSuperBlock& Super, CExt2Params& Param
 
 void CJournalInode::UpdateInodeTable()
 {
-  Inode.Mode = OctToDec(Type | Permissions);
+  Inode.Mode = OctToDec(Type + Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = (uint32)_Size;
   Inode.SizeInBytesHi = _Size >> 32;

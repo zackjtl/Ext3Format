@@ -22,6 +22,15 @@ CBlockManager::CBlockManager(uint32 TotalBlocks, uint32 BlockSize)
 	}
 	_UsedBmp.resize(byteCnt, 0x00);
 	_WrittenBmp = _UsedBmp;
+
+  uint32 endBit = TotalBlocks % 8;
+  uint32 endByte = byteCnt - 1;
+
+  if (endBit != 0) {
+    for (uint32 i = endBit; i < 8; ++i) {
+      _UsedBmp[endByte] |= (0x01 << i);
+    }
+  }  
 }
 
 CBlockManager::~CBlockManager()

@@ -17,8 +17,8 @@ CBlockGroup::CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, 
   uint32 lastGroup = Params.GroupCount - 1;
 
   StartBlock = Super.BlocksPerGroup * Index;
-  _BlockCount = _GroupId == lastGroup ? 
-                 Super.BlocksPerGroup : Params.BlocksOfLastGroup;
+  _BlockCount = _GroupId == lastGroup ?
+                 Params.BlocksOfLastGroup : Super.BlocksPerGroup;
 
   _HaveSuperBlockBackup = bg_has_super(Super, Index);  
 
@@ -61,7 +61,7 @@ void CBlockGroup::Initial()
   /* The bmp blocks was constrained in one block ? */
   Desc.InodeBmpBlock = Desc.BlockBmpBlock + _BlockBmpBlocks;   
   Desc.InodeTableBlock = Desc.InodeBmpBlock + _InodeBmpBlocks;
-  Desc.FreeBlockCount = CExt2Params::BlocksPerGroup - _FsBlocks;
+  Desc.FreeBlockCount = _BlockCount - _FsBlocks;
   Desc.FreeInodeCount = inodes;
   Desc.DirectoriesCount = 0;
   Desc.Flags = 0;
@@ -72,9 +72,8 @@ void CBlockGroup::Initial()
   Desc.GroupDescChecksum = 0;
 
   _InodeBmp.resize(inodeBmpSize, 0x00);
-  _BlockBmp.resize(blockBmpSize, 0x00);
+  _BlockBmp.resize(blockBmpSize, 0xFF);   
 }
-
 
 std::vector<byte>& CBlockGroup::GetBlockBmp()
 {
@@ -92,7 +91,7 @@ std::vector<byte>& CBlockGroup::GetInodeBmp()
 void CBlockGroup::UpdateGroupInfo(CBlockManager& BlockMan)
 {
   uint32 bmpOffset = StartBlock / 8;
-  uint32 bmpLen = _Params.BlocksPerGroup / 8;
+  uint32 bmpLen = (_BlockCount + 7) / 8;
 
   vector<byte>& globBmp = BlockMan.GetBlockBmp();
 
@@ -104,10 +103,9 @@ void CBlockGroup::UpdateGroupInfo(CBlockManager& BlockMan)
   memcpy((byte*)&_BlockBmp[0], (byte*)&globBmp[bmpOffset], bmpLen);    
 
   Desc.DirectoriesCount = 0;
-  Desc.FreeBlockCount = _GroupId == (_Params.GroupCount - 1) ? 
-                          _Params.BlocksOfLastGroup : _Params.BlocksPerGroup;
+  Desc.FreeBlockCount = _BlockCount;
 
-  for (uint32 block = 0; block < _Params.BlocksPerGroup; ++block) {
+  for (uint32 block = 0; block < _BlockCount; ++block) {
     if (_BlockBmp[block / 8] & (0x01 << (block % 8))) {
       --Desc.FreeBlockCount; 
     }
@@ -250,7 +248,7 @@ uint CBlockGroup::GetInodeCount()
 
 bool CBlockGroup::IsInodeExists(uint32 Inode)
 {
-  _InodeMap.find(Inode) == _InodeMap.end() ? false : true;
+  return _InodeMap.find(Inode) == _InodeMap.end() ? false : true;
 }
 
 /* Have free inode to be allocated */

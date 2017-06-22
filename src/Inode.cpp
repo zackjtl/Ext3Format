@@ -89,7 +89,7 @@ void CInode::SetPermissions(uint16 Value)
 
 void CInode::UpdateInodeTable()
 {
-  Inode.Mode = OctToDec(Type | Permissions);
+  Inode.Mode = OctToDec(Type + Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = (uint32)_Size;
   Inode.SizeInBytesHi = _Size >> 32;

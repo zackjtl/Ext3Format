@@ -96,6 +96,9 @@ void CSuperBlockWrapper::Invert(TSuperBlock* Source, TSuperBlock* Target)
   invt(Target->BlockCountHi);
   invt(Target->RsvdBlockCountHi);
   invt(Target->FreeBlockCountHi);   
+  invt(Target->MinExtraISize);
+  invt(Target->WantExtraISize);    
+  invt(Target->MiscFlags);    
 }
 
 /*
@@ -166,6 +169,9 @@ wstring CSuperBlockWrapper::ToString(uint Indent)
 	dispdec(BlockCountHi);
 	dispdec(RsvdBlockCountHi);
 	dispdec(FreeBlockCountHi);
+  dispdec(MinExtraISize);
+  dispdec(WantExtraISize);    
+  dispdec(MiscFlags); 
 
   return text.str();
 

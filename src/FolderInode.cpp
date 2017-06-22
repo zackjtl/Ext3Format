@@ -50,10 +50,14 @@ void CFolderInode::MkDir(uint32 DotInode, uint32 TwoDotInode, CBlockManager& Blo
 	MakeEntry(dotEntry, DotInode, EXT2_FT_DIR, ".", Super);
   memcpy(ptr, (byte*)&dotEntry, dotEntry.rec_len);
 
+  _NameList.insert(make_pair(".", DotInode));
+
   ptr += dotEntry.rec_len;
 
 	ext2_dir_entry 	twoDotEntry;
 	MakeEntry(twoDotEntry, TwoDotInode, EXT2_FT_DIR, "..", Super);
+
+  _NameList.insert(make_pair("..", TwoDotInode));
 
   _LastEntryOffset = dotEntry.rec_len;
   real_len = twoDotEntry.rec_len;
@@ -127,7 +131,7 @@ void CFolderInode::AddEntry(ext2_dir_entry& Entry, CBlockManager& BlockMan,
   /* replace the last entry's record length by the remain length */
   remain_len = _BlockSize - (_LastEntryOffset + real_rec_len);
   real_rec_len = Entry.rec_len;
-  Entry.rec_len = remain_len;  
+  Entry.rec_len = remain_len;   
   
   memcpy(ptr, (byte*)&Entry, real_rec_len);
   return;

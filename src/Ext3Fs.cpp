@@ -28,10 +28,10 @@ void CExt3Fs::Create()
 
 	/* Create file system specific inodes */
 	CreateRootDirectory();
-	CreateLostAndFoundDirectory();
   CreateResizeInode();
   CreateJournalInode();
   CreateSpecialInodes();
+  CreateLostAndFoundDirectory();
 
   /* Sync block bitmap and update group descriptors of each groups */
   UpdateBlockGroupsInfo();
@@ -114,7 +114,8 @@ void CExt3Fs::InitSuperBlock()
   Super.CompFeatureFlags = 0;
   Super.CompFeatureFlags |= EXT2_FEATURE_COMPAT_RESIZE_INODE |
                             EXT2_FEATURE_COMPAT_DIR_INDEX |
-                            EXT3_FEATURE_COMPAT_HAS_JOURNAL;
+                            EXT3_FEATURE_COMPAT_HAS_JOURNAL |
+                            EXT2_FEATURE_COMPAT_EXT_ATTR;
   Super.ROCompFeatureFlags = 0;
   Super.ROCompFeatureFlags |= EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER |
                               EXT2_FEATURE_RO_COMPAT_LARGE_FILE;
@@ -141,6 +142,11 @@ void CExt3Fs::InitSuperBlock()
   Super.FsCreateTime = GetPosixTime();
 
   Super.JournalInode = EXT2_JOURNAL_INO;
+
+  Super.MinExtraISize = 28;
+  Super.WantExtraISize = 28;
+  Super.MiscFlags = 0;
+  Super.MiscFlags |= EXT2_FLAGS_UNSIGNED_HASH;
 }
 
 /* 
@@ -314,8 +320,6 @@ void CExt3Fs::FlushSuperBlock()
 			TSuperBlock* ptable = (TSuperBlock*)ptr;
 			*ptable = Super;
       ptable->SPIndex = gp;
-
-      int temp = gp;
 		}
 	}
 }
@@ -402,6 +406,7 @@ void CExt3Fs::CreateJournalInode()
   inode->WriteData(*BlockMan.get(), Super, Params);
 
   memcpy((byte*)&Super.JournalBlock[0], (byte*)&inode->Inode.Blocks[0], sizeof(inode->Inode.Blocks));
+  Super.JournalFileSize = (uint32)inode->GetSize();
 }
 
 
@@ -438,7 +443,6 @@ void CExt3Fs::CreateLostAndFoundDirectory()
 	inode->WriteData(*BlockMan.get(), buffer.Data(), buffer.Size());
 }
 
-
 /* 
  *  Create the others special inodes
  */
@@ -446,24 +450,13 @@ void CExt3Fs::CreateSpecialInodes()
 {
   CBlockGroup* gb0 = BlockGroups[0];
 
-  uint othersInodes = (EXT2_GOOD_OLD_FIRST_INO) - gb0->GetInodeCount();
-
-  uint currIdx = 0;
-
-  while (gb0->IsInodeExists(currIdx)) {
-    ++currIdx;
-  }
-
-  for (uint i = 0; i < othersInodes; ++i) {
-    CInode* inode = gb0->AllocateNewInode(0);
-    inode->SetIndex(currIdx);
-
-    while (gb0->IsInodeExists(currIdx)) {
-      ++currIdx;
-    }    
+  for (uint i = 0; i < (EXT2_GOOD_OLD_FIRST_INO - 1); ++i) {
+    if (!gb0->IsInodeExists(i)) {
+      CInode* inode = gb0->AllocateNewInode(0);
+      inode->SetIndex(i);
+    }
   }
 }
-
 
 /*
  *	Real write file system into the storage.

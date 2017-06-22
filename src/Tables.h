@@ -84,6 +84,10 @@ typedef struct ext2_super_block {
   uint32  BlockCountHi;
   uint32  RsvdBlockCountHi;
   uint32  FreeBlockCountHi;  
+  
+	uint16	MinExtraISize;	  /* All inodes have at least # bytes */
+	uint16	WantExtraISize; 	/* New inodes should reserve # bytes */  
+  uint32	MiscFlags;		    /* Miscellaneous flags */
 } TSuperBlock;
 
 /*
@@ -227,6 +231,17 @@ typedef struct ext2_inode {
 					 EXT2_FEATURE_RO_COMPAT_LARGE_FILE| \
 					 EXT4_FEATURE_RO_COMPAT_DIR_NLINK| \
 					 EXT2_FEATURE_RO_COMPAT_BTREE_DIR)
+
+/*
+ * Misc. filesystem flags
+ */
+#define EXT2_FLAGS_SIGNED_HASH		0x0001  /* Signed dirhash in use */
+#define EXT2_FLAGS_UNSIGNED_HASH	0x0002  /* Unsigned dirhash in use */
+#define EXT2_FLAGS_TEST_FILESYS		0x0004	/* OK for use on development code */
+#define EXT2_FLAGS_IS_SNAPSHOT		0x0010	/* This is a snapshot image */
+#define EXT2_FLAGS_FIX_SNAPSHOT		0x0020	/* Snapshot inodes corrupted */
+#define EXT2_FLAGS_FIX_EXCLUDE		0x0040	/* Exclude bitmaps corrupted */
+
 
 /*
  * Ext2 directory file types.  Only the low 3 bits are used.  The

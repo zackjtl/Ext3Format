@@ -11,7 +11,7 @@
 
 CResizeInode::CResizeInode(uint16 BlockSize)
   : CInode(LINUX_S_IFREG, BlockSize),
-    _written(false)
+    _written(false)    
 {
   Permissions = 600;
 }
@@ -83,7 +83,7 @@ void CResizeInode::UpdateInodeTable()
 {
   _Size = DIndirect[0].size() * _middle_block_cnt * _BlockSize;
 
-  Inode.Mode = OctToDec(Type | Permissions);
+  Inode.Mode = OctToDec(Type + Permissions);
   Inode.Uid = 0;
   Inode.SizeInBytesLo = 4243456;
   Inode.SizeInBytesHi = 1;
