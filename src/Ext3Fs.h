@@ -13,6 +13,7 @@
 class CExt3Fs
 {
 public:
+  CExt3Fs();
   CExt3Fs(uint64 TotalSectors);
   ~CExt3Fs();
 
@@ -20,7 +21,7 @@ public:
 
 	void Write(CUsbDrive& Drive);
 
-private:
+protected:
 	void InitSuperBlock();
   void CreateBlockManager();
   void CreateBlockGroups();

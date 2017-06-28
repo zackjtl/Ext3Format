@@ -30,7 +30,7 @@ public:
 
   uint32 GetLastRealBlock();
 
-  int WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length);
+  int SetData(CBlockManager& BlockMan, byte* Buffer, uint32 Length);
   virtual void UpdateInodeTable();
 
 #ifdef _TEST_

@@ -19,7 +19,7 @@ CJournalInode::~CJournalInode()
 {
 }
 
-void CJournalInode::WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params)
+void CJournalInode::SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params)
 {
   Bulk<byte>  buffer(_JournalSize);
 
@@ -33,7 +33,7 @@ void CJournalInode::WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2
 
   ////memcpy(ptr, (byte*)&_JournalSp, sizeof(TJournalSuperBlock));
 
-  CInode::WriteData(BlockMan, buffer.Data(), buffer.Size());
+  CInode::SetData(BlockMan, buffer.Data(), buffer.Size());
 }
 
 void CJournalInode::InitJournalSuperBlock(TSuperBlock& Super, CExt2Params& Params)

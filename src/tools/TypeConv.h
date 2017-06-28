@@ -36,7 +36,11 @@ wstring Integer64ToHexWideString(int64 Value, uint Digits);
 wstring DecimalStringToDolloarForm(const wstring& Text);
 uint    OctalStringToInteger(const string& Text);
 uint    OctalStringToInteger(const wstring& Text);
+string IntegerToOctalString(uint Value, uint Digits);
+wstring IntegerToOctalWideString(uint Value, uint Digits);
+
 uint    OctToDec(uint Oct);
+uint    DecToOct(uint Dec);
 
 std::time_t GetPosixTime();
 

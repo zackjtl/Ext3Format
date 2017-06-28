@@ -364,10 +364,34 @@ uint OctalStringToInteger(const wstring& Text)
   return value;   
 }
 //---------------------------------------------------------------------------
+string IntegerToOctalString(uint Value, uint Digits)
+{
+  ostringstream  text;
+
+  text << oct << setw(Digits) << uppercase  << setfill('0') << right << Value;
+
+  return string(text.str());
+}
+//---------------------------------------------------------------------------
+wstring IntegerToOctalWideString(uint Value, uint Digits)
+{
+  wostringstream  text;
+
+  text << oct << setw(Digits) << uppercase  << setfill(L'0') << right << Value;
+
+  return text.str();
+}
+//---------------------------------------------------------------------------
 uint OctToDec(uint Oct)
 {
   string strOct = IntegerToString(Oct);
   return OctalStringToInteger(strOct);
+}
+//---------------------------------------------------------------------------
+uint DecToOct(uint Dec)
+{
+  string strOct = IntegerToOctalString(Dec, 8);
+  return StringToInteger(strOct);
 }
 //---------------------------------------------------------------------------
 std::time_t GetPosixTime()

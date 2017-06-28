@@ -8,6 +8,14 @@
 #include "BaseError.h"
 #include "TypeConv.h"
 
+/*
+ *  The default constructor is used for create an empty one to
+ *  read fs from media.
+ */
+CExt3Fs::CExt3Fs()
+{
+}
+
 CExt3Fs::CExt3Fs(uint64 TotalSectors)
   : TotalSectors(TotalSectors),
     Params(TotalSectors)
@@ -55,6 +63,7 @@ void CExt3Fs::CreateBlockGroups()
 {
 	for (uint32 i = 0; i < Params.GroupCount; ++i) {
   	CBlockGroup* ptr = new CBlockGroup(i, Super, Params, *BlockMan.get());
+    ptr->Initial();
 		ptr->OccupyFileSystemBlocks();
 		BlockGroups.push_back(ptr);
   }
@@ -72,6 +81,10 @@ void CExt3Fs::InitSuperBlock()
   Super.BlockCountHi = (uint32)(Params.TotalBlocks >> 32);
   Super.FreeBlockCnt = Super.BlockCnt;
 	Super.FreeBlockCountHi = Super.BlockCountHi;
+
+  uint32 sectorsPerBlock = Params.BlockSize / 512;
+  uint32 sbStartSector = Params.MBRSize / 512;
+  Params.BlockOfSuperBlock = sbStartSector / sectorsPerBlock;
 
   Super.Magic[0] = 0x53;
   Super.Magic[1] = 0xef;
@@ -237,7 +250,7 @@ void CExt3Fs::FlushGroupDescData()
 
 	for (uint32 gp = 0; gp < Params.GroupCount; ++gp) {
 		if (CBlockGroup::bg_has_super(Super, gp)) {
-			uint32 start_desc_block = BlockGroups[gp]->StartBlock + 1;
+			uint32 start_desc_block = BlockGroups[gp]->SuperBlockOffset + 1;
 
 			for (uint32 i = 0; i <Params.GroupDescBlockCnt; ++i) {
 				uint32 group_desc_block = start_desc_block + i;
@@ -308,6 +321,9 @@ void CExt3Fs::FlushSuperBlock()
 {
 	for (uint32 gp = 0; gp < Params.GroupCount; ++gp) {
 		if (CBlockGroup::bg_has_super(Super, gp)) {
+      uint gpDescBlock = gp * Params.BlocksPerGroup +
+                          (gp == 0 ? Params.BlockOfSuperBlock : 0);
+
 			Bulk<byte>*buffer = BlockMan->CreateSingleBlockDataBuffer(
                             gp * Params.BlocksPerGroup);
 			memset(buffer->Data(), 0x00, buffer->Size());
@@ -315,7 +331,7 @@ void CExt3Fs::FlushSuperBlock()
       byte* ptr = buffer->Data();
 
       if (gp == 0)
-        ptr += CExt2Params::MBRSize;
+        ptr += Params.MBRSize;
 
 			TSuperBlock* ptable = (TSuperBlock*)ptr;
 			*ptable = Super;
@@ -334,10 +350,10 @@ void CExt3Fs::CalcInodeNumber()
 	 * the inode table blocks in the descriptor.  If not, add some
 	 * additional inodes/group.  Waste not, want not...
 	 */
-  uint32 rough_inodes = ((float)Params.TotalBlocks / CExt2Params::InodeRatio) * CExt2Params::BlockSize;
+  uint32 rough_inodes = ((float)Params.TotalBlocks / Params.InodeRatio) * Params.BlockSize;
   uint32 inodes_per_group = div_ceil(rough_inodes, Params.GroupCount);
-  uint32 inodes_per_block = CExt2Params::BlockSize / Super.InodeSize;
-  InodeBlocksPerGroup = div_ceil(inodes_per_group * Super.InodeSize, CExt2Params::BlockSize);
+  uint32 inodes_per_block = Params.BlockSize / Super.InodeSize;
+  InodeBlocksPerGroup = div_ceil(inodes_per_group * Super.InodeSize, Params.BlockSize);
 
   inodes_per_group = inodes_per_block * InodeBlocksPerGroup;
 
@@ -350,7 +366,7 @@ void CExt3Fs::CalcInodeNumber()
 		inodes_per_group = 8;
 	inodes_per_group &= ~7;  
 
-  InodeBlocksPerGroup = div_ceil(inodes_per_group * Super.InodeSize, CExt2Params::BlockSize);
+  InodeBlocksPerGroup = div_ceil(inodes_per_group * Super.InodeSize, Params.BlockSize);
 
   Params.InodeBlocksPerGroup = InodeBlocksPerGroup; 
 
@@ -368,7 +384,7 @@ void CExt3Fs::CreateRootDirectory()
 
 	RootInode = (CFolderInode*)CInode::Create(LINUX_S_IFDIR, Params.BlockSize);
 
-	if (!bg0->OccupyInodeNumber(RootInode, EXT2_ROOT_INO - 1)) {
+	if (!bg0->AddInodeWithSpecificNumber(RootInode, EXT2_ROOT_INO - 1)) {
 		throw CError(L"Allocate inode for root directory failed");
 	}
 	RootInode->SetIndex(1);
@@ -386,10 +402,10 @@ void CExt3Fs::CreateResizeInode()
 
   CResizeInode* inode = new CResizeInode(Params.BlockSize);
 
-  if (!gb0->OccupyInodeNumber(inode, EXT2_RESIZE_INO - 1)) {
+  if (!gb0->AddInodeWithSpecificNumber(inode, EXT2_RESIZE_INO - 1)) {
     throw CError(L"Allocate resize inode failed");
   }
-  inode->WriteData(*BlockMan.get(), Super, Params);
+  inode->SetData(*BlockMan.get(), Super, Params);
 }
 
 /* 
@@ -400,10 +416,10 @@ void CExt3Fs::CreateJournalInode()
   CBlockGroup* gb0 = BlockGroups[0];
   CJournalInode* inode = new CJournalInode(Params.BlockSize);
 
-  if (!gb0->OccupyInodeNumber(inode, EXT2_JOURNAL_INO - 1)) {
+  if (!gb0->AddInodeWithSpecificNumber(inode, EXT2_JOURNAL_INO - 1)) {
     throw CError(L"Allocate journal inode failed");
   }
-  inode->WriteData(*BlockMan.get(), Super, Params);
+  inode->SetData(*BlockMan.get(), Super, Params);
 
   memcpy((byte*)&Super.JournalBlock[0], (byte*)&inode->Inode.Blocks[0], sizeof(inode->Inode.Blocks));
   Super.JournalFileSize = (uint32)inode->GetSize();
@@ -440,7 +456,7 @@ void CExt3Fs::CreateLostAndFoundDirectory()
 		/* Don't know why but according to the formatted card */
 		ptr[5] = 0x10;
 	}
-	inode->WriteData(*BlockMan.get(), buffer.Data(), buffer.Size());
+	inode->SetData(*BlockMan.get(), buffer.Data(), buffer.Size());
 }
 
 /* 

@@ -15,7 +15,7 @@ public:
 	void Attach(CInode* Inode, CBlockManager& BlockMan, TSuperBlock& Super);
 
 	/* TODO:
-	void ReadData(byte* Buffer, uint32 Length);
+	void RebuildInodeBlocks(byte* Buffer, uint32 Length);
 	void Seek(uint64 Position);
 	*/
   
@@ -24,17 +24,15 @@ public:
 
   void UpdateInodeTable();
 
-  uint32    _DotInode;
-  uint32    _TwoDotInode;
+  uint32    DotInode;
+  uint32    TwoDotInode;
 
 private:
 	void MakeEntry(ext2_dir_entry& Entry, uint32 Inode, uint8 FileType,
 									const char* Name, TSuperBlock& Super);
 
   void AddEntry(ext2_dir_entry& Entry, CBlockManager& BlockMan,
-                TSuperBlock& Super);
-
-  uint32 real_entry_size();                    
+                TSuperBlock& Super);        
 
 protected:
 	std::map<std::string, uint32>   _NameList; 

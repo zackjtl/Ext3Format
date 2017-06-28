@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include "Ext3Fs.h"
+#include "Ext3Fsck.h"
 #include "UsbDrive.h"
 #include "BaseError.h"
 #include "TypeConv.h"
@@ -24,6 +25,7 @@ enum fmtt {fmtt_ext2, fmtt_ext3};
 byte      FmtType = fmtt_ext3;
 string    DeviceName = "";
 bool      HelpMode = false;
+bool      CheckMode = false;
 
 void PRS(int argc, _TCHAR* argv[]);
 void PrintCapacity(uint32 Capacity);
@@ -42,6 +44,7 @@ void PrintCapacity(uint32 Capacity);
   wstring devName = ToWideString(DeviceName);
   unique_ptr<CUsbDrive> drive;
   unique_ptr<CExt3Fs> fs;
+  unique_ptr<CExt3Fsck> fsck;
   uint32 capacity;
 
   try {
@@ -61,13 +64,21 @@ void PrintCapacity(uint32 Capacity);
   capacity = drive->ReadCapacity();
 
   PrintCapacity(capacity);
-  printf("Create extended file system..\n");
 
-  /* Create file system with the device capacity */
-  fs.reset(new CExt3Fs(capacity));
-  fs->Create();
-  printf("Creation done. Write system into device..\n");
-  fs->Write(*drive.get());
+  if (!CheckMode) {
+    printf("Create extended file system..\n");
+
+    /* Create file system with the device capacity */
+    fs.reset(new CExt3Fs(capacity));
+    fs->Create();
+    printf("Creation done. Write system into device..\n");
+    fs->Write(*drive.get());
+  }
+  else {
+    fsck.reset(new CExt3Fsck(*drive.get()));
+    fsck->LoadFs();
+  }
+
   printf("Done\n");
 
 PROG_END:
@@ -101,6 +112,9 @@ void PRS(int argc, _TCHAR* argv[])
           throw CError(L"Unrecognized indicated format");
         }
       }
+      if (strcmp(argv[i], "-c") == 0) {
+        CheckMode = true;
+      }
     }
     else {
       string device = argv[i];
@@ -126,6 +140,7 @@ void PRS(int argc, _TCHAR* argv[])
 
   printf("Format Type:   %s\n", FmtType == fmtt_ext2 ? "ext2" : "ext3");
   printf("Target Device: %s\n", DeviceName.c_str());
+  printf("Check Mode:   %d\n", CheckMode);
 }
 
 /*

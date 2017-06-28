@@ -61,7 +61,7 @@ void WriteDirectBlockToIndirectBlock()
 	uint32 length = blockCnt * BlockSize + HalfBlock;
 	byte* ptr = Buffer.Data();
 
-	inode.WriteData(man, ptr, length);
+	inode.SetData(man, ptr, length);
 
 	ptr += length;
 	BlockPos += blockCnt;
@@ -75,7 +75,7 @@ void WriteDirectBlockToIndirectBlock()
 	blockCnt = ((DirectBlocks / 2) + 1) + (IndirectBlocks / 2 - 1);
 	length = blockCnt * BlockSize + HalfBlock + HalfBlock;
 
-	inode.WriteData(man, ptr, length);
+	inode.SetData(man, ptr, length);
 
 	ptr += length;
 	BlockPos += (blockCnt + 1);
@@ -113,7 +113,7 @@ void WriteIndirectBlockToDIndirectBlock()
 
 	make_pattern(ptr, 0x00, HalfBlock);
 
-	inode.WriteData(man, ptr, length);
+	inode.SetData(man, ptr, length);
 
 	BlockPos += blockCnt;
 	new_blocks += (blockCnt);
@@ -152,7 +152,7 @@ void WriteDIndirectBlockToTIndirectBlock()
 
 	make_pattern(ptr, 0x00, HalfBlock);
 
-	inode.WriteData(man, ptr, length);
+	inode.SetData(man, ptr, length);
 
 	BlockPos += blockCnt;
 	new_blocks += (blockCnt);

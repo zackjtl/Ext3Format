@@ -124,7 +124,7 @@
         <ILINK_TranslatedLibraryPath>$(BDSLIB)\$(PLATFORM)\debug\$(LANGDIR);$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <Debugger_RunParams>-t ext3</Debugger_RunParams>
+        <Debugger_RunParams>-t ext3 -c</Debugger_RunParams>
         <_TCHARMapping>char</_TCHARMapping>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
@@ -155,6 +155,9 @@
         </None>
         <None Include="..\..\inc\Bulk.h">
             <BuildOrder>47</BuildOrder>
+        </None>
+        <None Include="..\..\inc\fs_assert.h">
+            <BuildOrder>51</BuildOrder>
         </None>
         <None Include="..\..\inc\GlobalDef.h">
             <BuildOrder>48</BuildOrder>
@@ -199,6 +202,10 @@
             <DependentOn>..\..\src\Ext3Fs.h</DependentOn>
             <BuildOrder>30</BuildOrder>
         </CppCompile>
+        <CppCompile Include="..\..\src\Ext3fsck.cpp">
+            <DependentOn>..\..\src\Ext3fsck.h</DependentOn>
+            <BuildOrder>50</BuildOrder>
+        </CppCompile>
         <CppCompile Include="..\..\src\FileInode.cpp">
             <DependentOn>..\..\src\FileInode.h</DependentOn>
             <BuildOrder>31</BuildOrder>
@@ -207,6 +214,10 @@
             <DependentOn>..\..\src\FolderInode.h</DependentOn>
             <BuildOrder>32</BuildOrder>
         </CppCompile>
+        <CppCompile Include="..\..\src\FolderInodeReader.cpp">
+            <DependentOn>..\..\src\FolderInodeReader.h</DependentOn>
+            <BuildOrder>53</BuildOrder>
+        </CppCompile>
         <CppCompile Include="..\..\src\GroupDescWrapper.cpp">
             <DependentOn>..\..\src\GroupDescWrapper.h</DependentOn>
             <BuildOrder>33</BuildOrder>
@@ -214,6 +225,10 @@
         <CppCompile Include="..\..\src\Inode.cpp">
             <DependentOn>..\..\src\Inode.h</DependentOn>
             <BuildOrder>34</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\..\src\InodeReader.cpp">
+            <DependentOn>..\..\src\InodeReader.h</DependentOn>
+            <BuildOrder>52</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\..\src\InodeWrapper.cpp">
             <DependentOn>..\..\src\InodeWrapper.h</DependentOn>
@@ -348,6 +363,12 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName=".\Win32\Debug\e3fmt.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>e3fmt.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'=='true'" LocalName="$(BDS)\bin\cc32160mt.dll" Class="DependencyModule">
                     <Platform Name="Win32">
                         <Overwrite>true</Overwrite>
@@ -355,18 +376,6 @@
                 </DeployFile>
                 <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx32\libcgcrtl.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="..\..\bin\Win32\Debug\e3fmt.tds" Configuration="Debug" Class="DebugSymbols">
-                    <Platform Name="Win32">
-                        <RemoteName>e3fmt.tds</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\e3fmt.exe" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>e3fmt.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -397,6 +406,12 @@
                 </DeployFile>
                 <DeployFile Condition="'$(UsingDelphiRTL)'=='true'" LocalName="$(BDS)\bin\borlndmm.dll" Class="DependencyModule">
                     <Platform Name="Win32">
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="..\..\bin\Win32\Debug\e3fmt.tds" Configuration="Debug" Class="DebugSymbols">
+                    <Platform Name="Win32">
+                        <RemoteName>e3fmt.tds</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

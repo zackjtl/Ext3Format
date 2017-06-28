@@ -16,8 +16,8 @@ CFolderInode::CFolderInode(uint16 BlockSize)
     _LastEntryOffset(0),
     _LastEntryBlock(0)
 {
-	_DotInode = 0;
-	_TwoDotInode = 0;
+	DotInode = 0;
+	TwoDotInode = 0;
 }
 
 CFolderInode::~CFolderInode()
@@ -33,8 +33,8 @@ void CFolderInode::MkDir(uint32 DotInode, uint32 TwoDotInode, CBlockManager& Blo
 	if (_Initialized)
 		return;
 
-	_DotInode = DotInode;
-	_TwoDotInode = TwoDotInode;
+	DotInode = DotInode;
+	TwoDotInode = TwoDotInode;
 
   if (alloc_blocks(BlockMan, 1) != 0) {
     throw CError(L"Allocate block for directory failed");
@@ -86,14 +86,14 @@ void CFolderInode::Attach(CInode* Inode, CBlockManager& BlockMan,
 {
 	if (Inode->Type == LINUX_S_IFDIR) {
 		CFolderInode* folder = (CFolderInode*)Inode;
-		folder->MkDir(this->GetIndex(), _DotInode, BlockMan, Super);
+		folder->MkDir(this->GetIndex(), DotInode, BlockMan, Super);
 	}
 	ext2_dir_entry  entry;
   uint8 file_type = get_file_type(Inode->Type);
 	MakeEntry(entry, Inode->GetIndex(), file_type, Inode->GetName().c_str(), Super);
 
 	_NameList.insert(make_pair(Inode->GetName(), Inode->GetIndex()));
-	////this->WriteData(BlockMan, (byte*)&entry, entry.rec_len);
+	////this->SetData(BlockMan, (byte*)&entry, entry.rec_len);
 
   AddEntry(entry, BlockMan, Super);
 }

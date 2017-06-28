@@ -1,6 +1,8 @@
 #include "BlockManager.h"
 #include "BaseError.h"
+#include "GlobalDef.h"
 #include <cstring>
+#include <cassert>
 
 using namespace std;
 
@@ -333,4 +335,18 @@ Bulk<byte>* CBlockManager::GetSingleBlockDataBuffer(uint32 Block)
 	}
 	return src;
 }
+
+/*
+ *  Initial block bmp by the data from a data of an area.
+ */
+void CBlockManager::SetAreaBlockBmp(Bulk<byte>& AreaBmp, uint32 BeginBlock, uint32 BlockCount)
+{
+  uint32 byteOffset = BeginBlock / 8;
+  uint32 byteCnt = div_ceil(BlockCount, 8);
+
+  assert(AreaBmp.Size() >= byteCnt);
+
+  memcpy((byte*)&_UsedBmp[byteOffset], AreaBmp.Data(), byteCnt);
+}
+
 

@@ -5,6 +5,7 @@
 #include "Ext2Params.h"
 #include "BlockManager.h"
 #include "Inode.h"
+#include "UsbDrive.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -17,6 +18,10 @@ public:
 
   TGroupDesc& GetDescriptor() { return Desc; }
 
+  /* Initial descriptor and bitmaps */
+  void Initial();
+  void InitDescFromData(TGroupDesc& DescIn);
+
 	void UpdateGroupInfo(CBlockManager& BlockMan);
 	void UpdateInodeTables();
   
@@ -24,15 +29,21 @@ public:
   uint GetStartInodeIndex();  
   uint GetInodeCount();
   bool IsInodeExists(uint32 Inode);
+  bool IsInodeFree(uint32 Inode);
 
   /* Acquire inode from this group */
   bool HaveFreeInode();
   bool HaveSuperBlockBackup();
   CInode* AllocateNewInode(uint32 Type);
-  bool OccupyInodeNumber(CInode* Inode, uint32 InodeNumber);    
+  bool AddInodeWithSpecificNumber(CInode* Inode, uint32 InodeNumber);    
+
+  uint32 GetBlockCount();
 
   std::vector<byte>& GetBlockBmp();
   std::vector<byte>& GetInodeBmp();
+
+  void BulkSetBlockBmp(Bulk<byte>& Buffer, uint32 StartBlock, uint32 BlockCount);
+  void BulkSetInodeBmp(Bulk<byte>& Buffer, uint32 StartInode, uint32 InodeCount);
 
   void FlushInodeTables(CBlockManager& BlockMan);
 
@@ -42,17 +53,15 @@ public:
   uint32          StartBlock;
 
   /* The offset block of reserved gdt block */
-  uint32          RsvdGdtBlockOffset;  
+  uint32          RsvdGdtBlockOffset;
+
+  uint32          SuperBlockOffset;
 
 public:
   static bool bg_has_super(TSuperBlock& Super, uint32 GroupIndex);
 
   typedef struct std::map<uint32, CInode* >  inode_map;
 
-private:
-  
-  /* Initial descriptor and bitmaps */
-  void Initial();
 
 private:
   uint32        _GroupId;  

@@ -12,9 +12,9 @@ class CResizeInode : public CInode
 public:
   CResizeInode(uint16 BlockSize);
 
-  using CInode::WriteData;
+  using CInode::SetData;
 
-  void WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
+  void SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
   void UpdateInodeTable();
 
 private:

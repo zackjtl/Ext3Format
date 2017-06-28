@@ -114,7 +114,7 @@ void CInode::UpdateInodeTable()
  *  Set data into block units in the block manager.
  *  But not real write into storage media.
  */
-int CInode::WriteData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
+int CInode::SetData(CBlockManager& BlockMan, byte* Buffer, uint32 Length)
 {
 	uint32 blockPos = _Position / _BlockSize;
 	uint32 headOffset = _Position % _BlockSize;

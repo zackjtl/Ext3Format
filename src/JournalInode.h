@@ -13,7 +13,7 @@ public:
   CJournalInode(uint32 BlockSize);
   ~CJournalInode();
 
-  void WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
+  void SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
   void InitJournalSuperBlock(TSuperBlock& Super, CExt2Params& Params);
   void UpdateInodeTable();
 

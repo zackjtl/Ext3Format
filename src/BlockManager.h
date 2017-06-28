@@ -53,6 +53,8 @@ public:
 	Bulk<byte>* CreateSingleBlockDataBuffer(uint32 Block);
 	Bulk<byte>* GetSingleBlockDataBuffer(uint32 Block);
 
+  void SetAreaBlockBmp(Bulk<byte>& AreaBmp, uint32 StartBlock, uint32 BlockCount);
+
 	std::vector<byte>& GetBlockBmp();
 	std::vector<byte>& GetWrittenBmp();
 

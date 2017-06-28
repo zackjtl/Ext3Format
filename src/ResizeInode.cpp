@@ -19,7 +19,7 @@ CResizeInode::CResizeInode(uint16 BlockSize)
 /*
  *  Specialize the write data method for Resize Inode. 
  */
-void CResizeInode::WriteData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params)
+void CResizeInode::SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params)
 {
   if (_written) 
     throw CError(L"The resize inode can written only once.");
