@@ -7,6 +7,7 @@
 #include "JournalInode.h"
 #include "BaseError.h"
 #include "TypeConv.h"
+#include "E2fsBlockIo.h"
 
 /*
  *  The default constructor is used for create an empty one to
@@ -20,6 +21,7 @@ CExt3Fs::CExt3Fs(uint64 TotalSectors)
   : TotalSectors(TotalSectors),
     Params(TotalSectors)
 {
+  _HasJournal = true;
 }
 
 CExt3Fs::~CExt3Fs()
@@ -39,7 +41,7 @@ void CExt3Fs::Create()
   CreateResizeInode();
   CreateJournalInode();
   CreateSpecialInodes();
-  CreateLostAndFoundDirectory();
+  CreateLostAndFoundDirectory();  
 
   /* Sync block bitmap and update group descriptors of each groups */
   UpdateBlockGroupsInfo();
@@ -143,10 +145,9 @@ void CExt3Fs::InitSuperBlock()
   Super.JournalDevice = 0;
   Super.LastOrphanedInode = 0;
 
-  Super.HashSeed[0] = rand();
-  Super.HashSeed[1] = rand();
-  Super.HashSeed[2] = rand();
-	Super.HashSeed[3] = rand();
+  byte* pHashSeed = (byte*)&Super.HashSeed[0];
+
+  gen_uuid_v4(pHashSeed, 16);
 
   Super.DefaultHashVersion = 1;
 	Super.DefaultMountOptions = 12;  
@@ -159,7 +160,7 @@ void CExt3Fs::InitSuperBlock()
   Super.MinExtraISize = 28;
   Super.WantExtraISize = 28;
   Super.MiscFlags = 0;
-  Super.MiscFlags |= EXT2_FLAGS_UNSIGNED_HASH;
+  Super.MiscFlags |= EXT2_FLAGS_UNSIGNED_HASH;  
 }
 
 /* 
@@ -413,8 +414,18 @@ void CExt3Fs::CreateResizeInode()
  */
 void CExt3Fs::CreateJournalInode()
 {
+  int journalBlocks = GetDefaultJournalBlocks();
+
+  if (journalBlocks <= 0) {
+    Super.CompFeatureFlags &= (~EXT3_FEATURE_COMPAT_HAS_JOURNAL);
+    _HasJournal = false;
+    return;
+  }
+
+  ShiftBlockAllocPtrForJournal();  
+
   CBlockGroup* gb0 = BlockGroups[0];
-  CJournalInode* inode = new CJournalInode(Params.BlockSize);
+  CJournalInode* inode = new CJournalInode(Params.BlockSize, (uint32)journalBlocks);
 
   if (!gb0->AddInodeWithSpecificNumber(inode, EXT2_JOURNAL_INO - 1)) {
     throw CError(L"Allocate journal inode failed");
@@ -423,6 +434,23 @@ void CExt3Fs::CreateJournalInode()
 
   memcpy((byte*)&Super.JournalBlock[0], (byte*)&inode->Inode.Blocks[0], sizeof(inode->Inode.Blocks));
   Super.JournalFileSize = (uint32)inode->GetSize();
+
+  RestoreBlockAllocPtr();
+}
+
+int CExt3Fs::GetDefaultJournalBlocks()
+{
+  if (Params.TotalBlocks < 2048)       /* < 8MB */
+      return -1;
+  if (Params.TotalBlocks < 32768)      /* < 128MB */
+      return (1024);
+  if (Params.TotalBlocks < 256*1024)   /* < 1GB */
+      return (4096);           
+  if (Params.TotalBlocks < 512*1024)   /* < 2GB */
+      return (8192);
+  if (Params.TotalBlocks < 1024*1024)  /* < 4GB */
+      return (16384);
+  return 32768;
 }
 
 
@@ -459,6 +487,29 @@ void CExt3Fs::CreateLostAndFoundDirectory()
 	inode->SetData(*BlockMan.get(), buffer.Data(), buffer.Size());
 }
 
+
+/*
+ *  In the mke2fs, the blocks to store journal was shifted to the group
+ *  of the half of total groups.
+ */
+void CExt3Fs::ShiftBlockAllocPtrForJournal()
+{
+  uint32 journalLocatedBg = (Params.GroupCount / 2) - 1;
+
+  while (CBlockGroup::bg_has_super(Super, journalLocatedBg)) {
+    --journalLocatedBg;
+  }
+
+  _BlockAllocPtrBackup = BlockMan->GetBasePtr();  
+
+  BlockMan->ShiftBasePtr(journalLocatedBg * Params.BlocksPerGroup);
+}
+
+void CExt3Fs::RestoreBlockAllocPtr()
+{
+  BlockMan->ShiftBasePtr(_BlockAllocPtrBackup);
+}
+
 /* 
  *  Create the others special inodes
  */
@@ -479,69 +530,10 @@ void CExt3Fs::CreateSpecialInodes()
  */
 void CExt3Fs::Write(CUsbDrive& Drive)
 {
-	#define used_test(x) (used_bmp[x / 8] & (0x01 << (x % 8)))
-	#define written_test(x) (written_bmp[x / 8] & (0x01 << (x % 8)))
-	#define wr_valid(x) (used_test(x) && written_test(x))
+  CE2fsBlockIo io(*BlockMan.get(), &Drive, false);
 
-	const uint32 frag_window = 4;
-	vector<byte>&	used_bmp = BlockMan->GetBlockBmp();
-	vector<byte>&	written_bmp = BlockMan->GetWrittenBmp();
-
-	uint32 window_cnt = div_ceil(Super.BlockCnt, frag_window);
-	uint32 remain = Super.BlockCnt;
-
-	for (uint32 window = 0; window < window_cnt; ++window) {
-		uint32 offset = window * frag_window;
-		uint32 end = offset + frag_window;
-
-		uint32 cont_start = 0;
-		uint32 cont_cnt = 0;
-		bool previous = false;
-
-		for (uint32 block = offset; block < end; ++block) {
-			if (wr_valid(block)) {
-				if (previous) {
-					cont_cnt++;
-				}
-				else {
-					cont_start = block;
-					cont_cnt = 1;
-					previous = true;
-				}
-			}
-			else {
-				if (cont_cnt) {
-					// Write continuous area..
-         	WriteArea(Drive, cont_start, cont_cnt);
-					cont_cnt = 0;
-					previous  = false;
-				}
-
-      	previous = false;
-			}
-		}
-		if (cont_cnt) {
-			// Write continuous area..
-			WriteArea(Drive, cont_start, cont_cnt);
-		}
-	}
+  io.SetQueueBmp(BlockMan->GetWrittenBmp());
+  io.WriteBlocksInQueue();
 }
-
-/*
- *	Write continuous area within a specific fragment length
- */
-void CExt3Fs::WriteArea(CUsbDrive& Drive, uint32 StartBlock, uint32 Count)
-{
-	Bulk<byte>	buffer(Count * Params.BlockSize);
-
-	BlockMan->GetBlockData(StartBlock, buffer.Data(), buffer.Size());
-
-	uint32 sectorsPerBlock = Params.BlockSize / 512;
-	uint32 sector_pos = StartBlock * sectorsPerBlock;
-	uint32 sector_cnt = Count * sectorsPerBlock;
-
-	Drive.WriteSector(sector_pos, sector_cnt, buffer.Data());
-}
-
 
 

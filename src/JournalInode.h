@@ -10,7 +10,7 @@
 class CJournalInode : public CInode
 {
 public:
-  CJournalInode(uint32 BlockSize);
+  CJournalInode(uint32 BlockSize, uint32 JournalBlocks);
   ~CJournalInode();
 
   void SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params);
@@ -19,7 +19,7 @@ public:
 
 private:
 
-  uint32              _JournalSize;
+  uint32              _JournalBlocks;
   TJournalSuperBlock  _JournalSp;
 
 };

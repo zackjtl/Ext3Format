@@ -182,6 +182,10 @@
             <DependentOn>..\..\src\BlockManager.h</DependentOn>
             <BuildOrder>28</BuildOrder>
         </CppCompile>
+        <CppCompile Include="..\..\src\E2fsBlockIo.cpp">
+            <DependentOn>..\..\src\E2fsBlockIo.h</DependentOn>
+            <BuildOrder>55</BuildOrder>
+        </CppCompile>
         <None Include="..\..\src\error\BaseError.h">
             <BuildOrder>2</BuildOrder>
         </None>
@@ -289,6 +293,10 @@
         <CppCompile Include="..\..\src\JournalInode.cpp">
             <DependentOn>..\..\src\JournalInode.h</DependentOn>
             <BuildOrder>37</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="..\..\src\JournalInodeReader.cpp">
+            <DependentOn>..\..\src\JournalInodeReader.h</DependentOn>
+            <BuildOrder>54</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\..\src\JournalSpWrapper.cpp">
             <DependentOn>..\..\src\JournalSpWrapper.h</DependentOn>

@@ -58,6 +58,12 @@ public:
 	std::vector<byte>& GetBlockBmp();
 	std::vector<byte>& GetWrittenBmp();
 
+  uint32  GetTotalBlocks();
+  uint32  GetBlockSize();
+
+  void ShiftBasePtr(uint32 Value);
+  uint32 GetBasePtr();
+
 private:
 
 	std::vector<byte>		_UsedBmp;

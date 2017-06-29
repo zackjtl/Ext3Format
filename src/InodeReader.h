@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include "Inode.h"
 #include "UsbDrive.h"
+#include "E2fsBlockIo.h"
 //---------------------------------------------------------------------------
 class CInodeReader : public CInode
 {
@@ -25,6 +26,9 @@ public:
   uint32 RebuildMultiIndirectBlocks(CBlockManager& BlockMan, CUsbDrive* Drive,
                                 uint32 Layer, uint32 RemainBlocks);                                
 
+  // Calculate leaf blocks from the block link trees
+  uint32 GetTotalDataBlocks();
+
 protected:
   void AddBlockArray(vector<uint32>* Array, Bulk<byte>* Buffer, uint32 Count);
   Bulk<byte>* LoadSingleBlockDataFromMedia(CBlockManager& BlockMan, CUsbDrive* Drive, uint32 Block);
@@ -35,11 +39,10 @@ protected:
   uint32 ReadMultiIndirectLeafBlocks(CBlockManager& BlockMan, CUsbDrive* Drive,
                                     uint32 Layer, byte* Buffer, uint32 Length);
   
-  void ReadInodeData(CBlockManager& BlockMan, CUsbDrive* Drive);
-
+  void ReadInodeData(CBlockManager& BlockMan, CUsbDrive* Drive, uint32 ReadBlocks = 0);
 
 protected:
-  Bulk<byte>  _DataBuffer;
+  Bulk<byte>    _DataBuffer;
 };
 //---------------------------------------------------------------------------
 #endif

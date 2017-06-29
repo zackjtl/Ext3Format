@@ -60,7 +60,6 @@ void PrintCapacity(uint32 Capacity);
     printf("[Error] Unable to open the device handle\n");
     goto PROG_END;
   }
-
   capacity = drive->ReadCapacity();
 
   PrintCapacity(capacity);

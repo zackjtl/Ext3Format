@@ -6,6 +6,7 @@
 #include "FolderInodeReader.h"
 #include "GlobalDef.h"
 #include "BaseError.h"
+#include "E2fsBlockIo.h"
 #include "fs_assert.h"
 //---------------------------------------------------------------------------
 CInodeReader* CInodeReader::Create(TInode* Inode, uint16 BlockSize)
@@ -99,9 +100,9 @@ uint32 CInodeReader::RebuildIndirectBlocks(CBlockManager& BlockMan, CUsbDrive* D
 
   Bulk<byte>  addrTable(_BlockSize);
 
-  if (Drive != NULL) {
+  if (Drive != NULL) {     
     Bulk<byte>* buffer = LoadSingleBlockDataFromMedia(BlockMan, Drive, Inode.Blocks[EXT2_IND_BLOCK]);
-    AddBlockArray(&Indirect, buffer, readCnt);
+    AddBlockArray(&Indirect, buffer, readCnt);    
   }
   return readCnt;
 }
@@ -143,8 +144,15 @@ uint32 CInodeReader::RebuildMultiIndirectBlocks(CBlockManager& BlockMan, CUsbDri
 
     vector<uint32>* child_array = &(*matrix)[layer];
 
+    if (Drive != NULL) {
+      CE2fsBlockIo io(BlockMan, Drive, true);
+      io.SetArrayToQueue(*parent_array);
+      io.ReadBlocksInQueue();
+    }
+
     for (uint32 idx = 0; idx < count; ++idx) {
-      uint32 add_cnt = min_of(child_remain, _AddrPerBlock);      Bulk<byte>* buffer = LoadSingleBlockDataFromMedia(BlockMan, Drive, (*parent_array)[idx]);
+      uint32 add_cnt = min_of(child_remain, _AddrPerBlock);      
+      Bulk<byte>* buffer = BlockMan.GetSingleBlockDataBuffer((*parent_array)[idx]);
       AddBlockArray(child_array, buffer, add_cnt);
       child_remain -= add_cnt;
     }
@@ -192,46 +200,67 @@ Bulk<byte>* CInodeReader::LoadSingleBlockDataFromMedia(CBlockManager& BlockMan, 
   return buffer;
 }
 
+/*
+ * Calculate leaf blocks from the block link trees
+ */
+uint32 CInodeReader::GetTotalDataBlocks()
+{
+  return Direct.size() + Indirect.size() +
+          DIndirect[1].size() + TIndirect[2].size();
+}
 
 /*
  *  Rebuild inode whole data blocks.
  */
-void CInodeReader::ReadInodeData(CBlockManager& BlockMan, CUsbDrive* Drive)
+void CInodeReader::ReadInodeData(CBlockManager& BlockMan, CUsbDrive* Drive, uint32 ReadBlocks)
 {
   uint32 sectorsPerBlock = _BlockSize / 512;
   uint64 inodeSize = Inode.SizeInBytesLo + ((uint64)Inode.SizeInBytesHi << 32);
   uint32 expectedBlocks = div_ceil(inodeSize, _BlockSize);
-  uint32 totalBlocks = Direct.size() + Indirect.size() +
-                       DIndirect[1].size() + TIndirect[2].size();
+  uint32 totalBlocks = GetTotalDataBlocks();
 
   fs_assert_eq(expectedBlocks, totalBlocks);
 
   _DataBuffer.Resize(totalBlocks * _BlockSize);
 
   byte* ptr = _DataBuffer.Data();
-  uint32 remainSize = _DataBuffer.Size();
 
-  uint32 readSize = ReadDirectBlocks(BlockMan, Drive, ptr, remainSize);
-  remainSize -= readSize;
+  uint32 totalReaded = 0;
+  uint32 targetSize = ReadBlocks == 0 ? _DataBuffer.Size() :
+                        min_of(ReadBlocks, totalBlocks) * _BlockSize;
+
+  uint32 remainBuffer = _DataBuffer.Size();
+
+  uint32 readSize = ReadDirectBlocks(BlockMan, Drive, ptr, remainBuffer);
+  remainBuffer -= readSize;
   ptr += readSize;
+  totalReaded += readSize;
 
-  if (remainSize) {
-    readSize = ReadIndirectLeafBlocks(BlockMan, Drive, ptr, remainSize);
-    remainSize -= readSize;
+  if (remainBuffer && (totalReaded < targetSize)) {
+    readSize = ReadIndirectLeafBlocks(BlockMan, Drive, ptr, remainBuffer);
+    remainBuffer -= readSize;
     ptr += readSize;
+    totalReaded += readSize;
 
-    if (remainSize) {
-      readSize = ReadMultiIndirectLeafBlocks(BlockMan ,Drive, 2, ptr, remainSize);
-      remainSize -= readSize;
+    if (remainBuffer && (totalReaded < targetSize)) {
+      readSize = ReadMultiIndirectLeafBlocks(BlockMan ,Drive, 2, ptr, remainBuffer);
+      remainBuffer -= readSize;
       ptr += readSize;
+      totalReaded += readSize;
 
-      if (remainSize) {
-        readSize = ReadMultiIndirectLeafBlocks(BlockMan ,Drive, 3, ptr, remainSize);
-        remainSize -= readSize;
+      if (remainBuffer && (totalReaded < targetSize)) {
+        readSize = ReadMultiIndirectLeafBlocks(BlockMan ,Drive, 3, ptr, remainBuffer);
+        remainBuffer -= readSize;
+        totalReaded += readSize;
       }
     }
   }
-  fs_assert_eq(remainSize, 0);
+  if (ReadBlocks == 0) {
+    fs_assert_eq(remainBuffer, 0);
+  }
+  else {
+    fs_assert_true(totalReaded >= targetSize);
+  }
 }
 
 /*
@@ -240,7 +269,7 @@ void CInodeReader::ReadInodeData(CBlockManager& BlockMan, CUsbDrive* Drive)
  *   Otherwise, this is used to read data from media device.
  */
 uint32 CInodeReader::ReadDirectBlocks(CBlockManager& BlockMan, CUsbDrive* Drive,
-                                            byte* Buffer, uint32 Length)
+                                      byte* Buffer, uint32 Length)
 {
   uint32 blocks = Direct.size();
   byte* ptr = Buffer;
@@ -248,16 +277,17 @@ uint32 CInodeReader::ReadDirectBlocks(CBlockManager& BlockMan, CUsbDrive* Drive,
   if (Length < (blocks * _BlockSize)) {
     throw CError(L"Insuffcient buffer length to read direct blocks data");
   }
+  if (Drive != NULL) {
+    CE2fsBlockIo io(BlockMan, Drive, true);
+    io.SetArrayToQueue(Direct);
+    io.ReadBlocksInQueue();
+  }  
+
   for (uint32 block = 0; block < blocks; ++block) {
     uint32 realBlock = Inode.Blocks[block];
-
-    if (Drive != NULL) {
-      LoadSingleBlockDataFromMedia(BlockMan, Drive, realBlock);
-    }
-    BlockMan.GetSingleBlockData(realBlock, ptr, _BlockSize);
-
+    BlockMan.GetSingleBlockData(realBlock, ptr, _BlockSize);    
     ptr += _BlockSize;
-  }
+  }  
   return blocks * _BlockSize;
 }
 
@@ -271,16 +301,17 @@ uint32 CInodeReader::ReadIndirectLeafBlocks(CBlockManager& BlockMan, CUsbDrive* 
     throw CError(L"Insuffcient buffer length to read indirect blocks data");
   }
 
+  if (Drive != NULL) {
+    CE2fsBlockIo io(BlockMan, Drive, true);
+    io.SetArrayToQueue(Indirect);
+    io.ReadBlocksInQueue();
+  }
+  
   for (uint32 block = 0; block < blockCnt; ++block) {
     uint32 realBlock = Indirect[block];
-
-    if (Drive != NULL) {
-      LoadSingleBlockDataFromMedia(BlockMan, Drive, realBlock);
-    }
-    BlockMan.GetSingleBlockData(realBlock, ptr, _BlockSize);
-
+    BlockMan.GetSingleBlockData(realBlock, ptr, _BlockSize);    
     ptr += _BlockSize;
-  }
+  }  
   return blockCnt * _BlockSize;
 }
 
@@ -308,14 +339,15 @@ uint32 CInodeReader::ReadMultiIndirectLeafBlocks(CBlockManager& BlockMan, CUsbDr
   if (Length < (leafBlocks * _BlockSize)) {
     throw CError(L"Insuffcient buffer length to multi-indirect blocks data");
   }
+  if (Drive != NULL) {
+    CE2fsBlockIo io(BlockMan, Drive, true);
+    io.SetArrayToQueue((*matrix)[leafLayer]);
+    io.ReadBlocksInQueue();
+  }
+  
   for (uint32 block = 0; block < leafBlocks; ++block) {
-    uint32 realBlock = (*matrix)[leafLayer][block];
-
-    if (Drive != NULL) {
-      LoadSingleBlockDataFromMedia(BlockMan, Drive, realBlock);
-    }
+    uint32 realBlock = (*matrix)[leafLayer][block];     
     BlockMan.GetSingleBlockData(realBlock, ptr, _BlockSize);
-
     ptr += _BlockSize;
   }
   return leafBlocks * _BlockSize;

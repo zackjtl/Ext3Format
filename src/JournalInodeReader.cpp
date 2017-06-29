@@ -4,6 +4,7 @@
 //---------------------------------------------------------------------------
 #include "JournalInodeReader.h"
 #include "JournalSpWrapper.h"
+#include "GlobalDef.h"
 #include "fs_assert.h"
 //---------------------------------------------------------------------------
 CJournalInodeReader::CJournalInodeReader(TInode* InodeIn, uint16 BlockSize)
@@ -18,7 +19,10 @@ CJournalInodeReader::~CJournalInodeReader()
 void CJournalInodeReader::Read(CBlockManager& BlockMan, CUsbDrive* Drive)
 {
   RebuildInodeBlocks(BlockMan, Drive);
-  ReadInodeData(BlockMan, Drive);
+
+  /* Just read a part of blocks to check */
+  uint32 check_blocks = min_of(1024, GetTotalDataBlocks());
+  ReadInodeData(BlockMan, Drive, check_blocks);
 }
 
 /*

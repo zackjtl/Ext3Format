@@ -46,19 +46,26 @@ protected:
   void FlushInodeTables();
   void FlushSuperBlock();
 
-	void WriteArea(CUsbDrive& Drive, uint32 StartBlock, uint32 Count);
+  void ShiftBlockAllocPtrForJournal();
+  void RestoreBlockAllocPtr();
+
+  int GetDefaultJournalBlocks();
 
 public:
   TSuperBlock   Super;
   uint64        TotalSectors;  
-  uint32        InodeBlocksPerGroup;
+  uint32        InodeBlocksPerGroup;  
 
   CExt2Params   Params;
 
 	std::vector<CBlockGroup*> 		BlockGroups;
 	unique_ptr<CBlockManager>	   	BlockMan;
 
-	CFolderInode*               	RootInode;
+	CFolderInode*               	RootInode;  
+
+private:
+  uint32    _BlockAllocPtrBackup;
+  bool      _HasJournal;
 };
 
 #endif

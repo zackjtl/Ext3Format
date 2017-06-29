@@ -349,4 +349,24 @@ void CBlockManager::SetAreaBlockBmp(Bulk<byte>& AreaBmp, uint32 BeginBlock, uint
   memcpy((byte*)&_UsedBmp[byteOffset], AreaBmp.Data(), byteCnt);
 }
 
+uint32 CBlockManager::GetTotalBlocks()
+{
+  return _TotalBlocks;
+}
+
+uint32 CBlockManager::GetBlockSize()
+{
+  return _BlockSize;
+}
+
+void CBlockManager::ShiftBasePtr(uint32 Value)
+{
+  _BasePtr = Value;
+}
+
+uint32 CBlockManager::GetBasePtr()
+{
+  return _BasePtr;
+}
+
 

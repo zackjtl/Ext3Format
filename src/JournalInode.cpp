@@ -8,11 +8,12 @@
 #include <cstring>
 
 //---------------------------------------------------------------------------
-CJournalInode::CJournalInode(uint32 BlockSize)
-  : CInode(LINUX_S_IFREG, BlockSize)
+CJournalInode::CJournalInode(uint32 BlockSize, uint32 JournalBlocks)
+  : CInode(LINUX_S_IFREG, BlockSize),
+    _JournalBlocks(JournalBlocks)
 {
   Permissions = 600;
-  _JournalSize = (uint32)128 << 20; // 128MB
+  ////_JournalBlocks = (uint32)128 << 20; // 128MB
 }
 
 CJournalInode::~CJournalInode()
@@ -21,7 +22,7 @@ CJournalInode::~CJournalInode()
 
 void CJournalInode::SetData(CBlockManager& BlockMan, TSuperBlock& Super, CExt2Params& Params)
 {
-  Bulk<byte>  buffer(_JournalSize);
+  Bulk<byte>  buffer(_JournalBlocks * _BlockSize);
 
   byte* ptr = buffer.Data();
   
@@ -42,7 +43,7 @@ void CJournalInode::InitJournalSuperBlock(TSuperBlock& Super, CExt2Params& Param
   _JournalSp.Header.BlockType = 4;
   _JournalSp.Header.SequenceNumber = 0;
   _JournalSp.BlockSize = (uint32)Params.BlockSize;
-  _JournalSp.BlockCount = _JournalSize / _JournalSp.BlockSize;
+  _JournalSp.BlockCount = _JournalBlocks;
   _JournalSp.StartBlock = 1;
   _JournalSp.SequenceOf1stTrans = 1;
   _JournalSp.BlockOf1stTrans = 0;

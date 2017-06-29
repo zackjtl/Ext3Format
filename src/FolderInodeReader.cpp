@@ -24,7 +24,6 @@ void CFolderInodeReader::AddEntry(ext2_dir_entry& Entry)
   _NameList.insert(make_pair(name, Entry.inode));
 }
 
-
 /*
  *  For directory inodes, read all inode data to rebuild entries.
  */
