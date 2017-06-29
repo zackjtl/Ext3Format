@@ -29,10 +29,10 @@ CInode* CInode::Create(uint32 Type, uint16 BlockSize)
 CInode::CInode(uint32 Type, uint16 BlockSize)
 	: Type(Type),
 		_BlockSize(BlockSize),
-		AddrPerBlock(BlockSize / sizeof(uint32)),
+		_AddrPerBlock(BlockSize / sizeof(uint32)),
 		IndirectBlockThreshold(EXT2_NDIR_BLOCKS),
-		DIndirectBlockThreshold(EXT2_NDIR_BLOCKS + AddrPerBlock),
-		TIndirectBlockThreshold(DIndirectBlockThreshold + AddrPerBlock * AddrPerBlock),
+		DIndirectBlockThreshold(EXT2_NDIR_BLOCKS + _AddrPerBlock),
+		TIndirectBlockThreshold(DIndirectBlockThreshold + _AddrPerBlock * _AddrPerBlock),
 		_Index(0),
 		_GroupID(0),
 		Permissions(000),
@@ -98,7 +98,7 @@ void CInode::UpdateInodeTable()
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.SectorCount = div_ceil(_Size, 512);
+  Inode.SectorCount = CalculateSectorCount(_Size);
   Inode.FileFlags = 0;
   Inode.HardLinkCnt = Type == LINUX_S_IFREG ? 1 : 0;
   Inode.OS_Dep1 = 0;
@@ -238,7 +238,7 @@ uint32 CInode::alloc_dir_blocks(CBlockManager& BlockMan, uint32 RequireBlocks)
 uint32 CInode::alloc_indr_blocks(CBlockManager& BlockMan, uint32 RequireBlocks)
 {
 	uint32 indir_offset = Indirect.size();
-	uint32 indir_remain = AddrPerBlock - indir_offset;
+	uint32 indir_remain = _AddrPerBlock - indir_offset;
   uint32 request_cnt = min_of(indir_remain, RequireBlocks);
 
 	if (indir_offset == 0) {
@@ -338,7 +338,7 @@ uint32 CInode::GrowthTree(CIndrMatrix& Matrix, CBlockManager& BlockMan, uint32 R
 		for (int layer = (leaf_layer - 1); layer >= 0; --layer) {
 			uint remain_cnt = layer_max_size[layer] - layer_curr_size[layer];
 			uint child_cnt = layer_new_size[layer + 1];
-			uint need_cnt = div_ceil(child_cnt, AddrPerBlock);
+			uint need_cnt = div_ceil(child_cnt, _AddrPerBlock);
 
 			/* The required size has been checked for leaf, so it is impossible to
 					require exceed parent's capacity. */
@@ -378,8 +378,8 @@ uint32 CInode::GrowthTree(CIndrMatrix& Matrix, CBlockManager& BlockMan, uint32 R
 void CInode::UpdateAddressTable(CIndrMatrix& Matrix, CBlockManager& BlockMan,
 															 uint32 NewCount, uint8 Layer)
 {
-	#define get_parent(x, y) (Matrix[x-1][y/AddrPerBlock])
-	#define to_local(x)   (x % AddrPerBlock)
+	#define get_parent(x, y) (Matrix[x-1][y/_AddrPerBlock])
+	#define to_local(x)   (x % _AddrPerBlock)
 
 	if (Layer == 0) {
   	/* Update the root block data */
@@ -460,10 +460,10 @@ void CInode::make_layer_curr_sizes(uint32 Sizes[3], CIndrMatrix& Matrix)
 void CInode::make_layer_max_sizes(uint32 Sizes[3])
 {
 	for (int i = 0; i < 3; ++i) {
-		uint32 max = AddrPerBlock;
+		uint32 max = _AddrPerBlock;
 
 		for (int f = 0; f < i; ++f) {
-			max *= AddrPerBlock;
+			max *= _AddrPerBlock;
 		}
 		Sizes[i] = max;
 	}
@@ -484,7 +484,7 @@ bool CInode::IndexToRealBlock(uint32 Index, uint32& Real)
            Index < TIndirectBlockThreshold) {           
     uint32 offset = Index - DIndirectBlockThreshold;
     
-		uint32 layer0 = offset / AddrPerBlock;
+		uint32 layer0 = offset / _AddrPerBlock;
 		if (DIndirect.size() != 2)
 			return false;
 			////throw CError(L"Double Indirect block array not created completed");
@@ -499,8 +499,8 @@ bool CInode::IndexToRealBlock(uint32 Index, uint32& Real)
   }          
   else {
     uint32 offset = Index - TIndirectBlockThreshold;
-		uint32 layer1 = offset / AddrPerBlock;
-		uint32 layer0 = layer1 / AddrPerBlock;
+		uint32 layer1 = offset / _AddrPerBlock;
+		uint32 layer0 = layer1 / _AddrPerBlock;
 		if (TIndirect.size() != 3)
 			return false;
 			////throw CError(L"Tripple Indirect block array not created completed");
@@ -612,8 +612,8 @@ void CInode::ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix
 			buffer = BlockMan.GetSingleBlockDataBuffer(addr_block);
 			assert(buffer != NULL);
 
-			uint child_offset = block * AddrPerBlock;
-			uint child_cnt = min_of(next_layer_size - child_offset, AddrPerBlock);
+			uint child_offset = block * _AddrPerBlock;
+			uint child_cnt = min_of(next_layer_size - child_offset, _AddrPerBlock);
 
 			if (memcmp(buffer->Data(), (uint8*)&Matrix[layer+1][child_offset],
 										child_cnt * sizeof(uint32)) != 0) {
@@ -621,6 +621,53 @@ void CInode::ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix
 			}
 		}
 	}
+}
+/*
+ *  The sector count recorded in the inode contains the data sectors and the
+ *  indirect linking blocks.
+ */
+uint32 CInode::CalculateSectorCount(uint32 Size)
+{ 
+  uint32 total_blocks = div_ceil(Size, _BlockSize); 
+  uint32 remain_blocks = total_blocks;
+  uint32 sectors_per_block = _BlockSize / 512;
+
+  uint32 dir_blocks = 0;
+  uint32 ind_blocks = 0;
+  uint32 dind_blocks[2] = {0, 0};
+  uint32 tind_blocks[3] = {0, 0, 0};
+
+  uint32 sectors = div_ceil(Size, 512);
+
+  dir_blocks = min_of(EXT2_NDIR_BLOCKS, remain_blocks);
+  remain_blocks -= dir_blocks;
+
+  if (remain_blocks) {
+    ind_blocks = min_of(_AddrPerBlock, remain_blocks);
+    remain_blocks -= ind_blocks;
+
+    sectors += sectors_per_block;
+
+    if (remain_blocks) {
+      uint32 max_dind_leaf = _AddrPerBlock * _AddrPerBlock;
+      dind_blocks[1] = min_of(max_dind_leaf, remain_blocks);
+      dind_blocks[0] = div_ceil(dind_blocks[1], _AddrPerBlock);
+      remain_blocks -= dind_blocks[1];
+
+      sectors += ((dind_blocks[0] + 1) * sectors_per_block);
+
+      if (remain_blocks) {
+        uint32 max_tind_leaf = _AddrPerBlock * _AddrPerBlock * _AddrPerBlock;
+        tind_blocks[2] = min_of(max_tind_leaf, remain_blocks);
+        tind_blocks[1] = div_ceil(tind_blocks[2], _AddrPerBlock);
+        tind_blocks[0] = div_ceil(tind_blocks[1], _AddrPerBlock);
+
+        sectors += (tind_blocks[1] * sectors_per_block);
+        sectors += ((tind_blocks[0] + 1) * sectors_per_block);
+      }
+    }
+  }  
+  return sectors;
 }
 
 

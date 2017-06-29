@@ -384,3 +384,34 @@ bool CBlockGroup::AddInodeWithSpecificNumber(CInode* Inode, uint32 InodeNo)
   return true;
 }
 
+/*
+ *  Compare free block count in the descriptor and calculated from block bmp
+ */
+void CBlockGroup::ValidateFreeBlockCount()
+{
+  uint32 freeBlocks = _BlockCount;
+
+  for (uint32 block = 0; block < _BlockCount; ++block) {
+    if (_BlockBmp[block / 8] & (0x01 << (block %  8))) {
+      --freeBlocks;
+    }
+  }
+  fs_assert_eq(freeBlocks, Desc.FreeBlockCount);
+}
+
+/*
+ *  Compare free inode count in the descriptor and calculated from inode bmp
+ */
+void CBlockGroup::ValidateFreeInodeCount()
+{
+  uint32 freeInodes = _Super.InodesPerGroup;
+
+  for (uint32 inode = 0; inode < _Super.InodesPerGroup; ++inode) {
+    if (_InodeBmp[inode / 8] & (0x01 << (inode %  8))) {
+      --freeInodes;
+    }
+  }
+  fs_assert_eq(freeInodes, Desc.FreeInodeCount);
+}
+
+

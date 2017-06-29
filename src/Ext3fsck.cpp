@@ -5,6 +5,7 @@
 #include "fs_assert.h"
 #include "InodeReader.h"
 #include "FolderInodeReader.h"
+#include "JournalInodeReader.h"
 //---------------------------------------------------------------------------
 CExt3Fsck::CExt3Fsck(CUsbDrive& Drive)
   : _Drive(Drive)
@@ -26,8 +27,9 @@ void CExt3Fsck::LoadFs()
   ReadInodeBmp();
   RebuildRootDir();
 
-  ////ReadBlockBmp();
-  
+  if (Super.CompFeatureFlags & EXT3_FEATURE_COMPAT_HAS_JOURNAL) {
+    RebuildJournalInode();
+  } 
 }
 //---------------------------------------------------------------------------
 void CExt3Fsck::ReadSuperBlock()
@@ -122,6 +124,7 @@ void CExt3Fsck::ReadBlockBmp()
       blockPos += set_blk_cnt;
       remainBlocks -= set_blk_cnt;
     }
+    gp->ValidateFreeBlockCount();
   }
   _BlockBmpLoaded = true;
 }
@@ -151,6 +154,7 @@ void CExt3Fsck::ReadInodeBmp()
       inodePos += set_inode_cnt;
       remainInodes -= set_inode_cnt;
     }    
+    gp->ValidateFreeInodeCount();
   }
 }
 //---------------------------------------------------------------------------
@@ -199,37 +203,36 @@ void CExt3Fsck::RebuildFolder(CFolderInodeReader* Dir)
     uint group = entryInode / Super.InodesPerGroup;
     uint inodeOffset = entryInode % Super.InodesPerGroup;
 
+    unique_ptr<CInodeReader>  inodeReader(CInodeReader::Create(
+                                        &inode, Params.BlockSize));
+
     if (!BlockGroups[group]->IsInodeFree(inodeOffset)) {
-      unique_ptr<CInodeReader>  inodeReader(CInodeReader::Create(
-                                          &inode, Params.BlockSize));
-
-      inodeReader->Read(*BlockMan.get(), &_Drive);
-      inodeReader->SetIndex(entryInode);
-
-      BlockGroups[group]->AddInodeWithSpecificNumber((CInode*)inodeReader.get(),
-                                                 entryInode);
 
       if (entryId == 0) {
         if ((!inodeReader->IsFolderInode()) ||
             (strcmp(entry->name, ".") != 0)) {
           throw CError(L"Not dot inode expected of the first in the folder");
         }
+        fs_assert_eq(entry->inode - 1, Dir->GetIndex());
       }
       else if (entryId == 1) {
         if ((!inodeReader->IsFolderInode()) ||
             (strcmp(entry->name, "..") != 0)) {
           throw CError(L"Not dot inode expected of the first in the folder");
         }
-      }
-      if (entryId == 0) {
-        fs_assert_eq(entry->inode - 1, Dir->GetIndex());
-      }
-      /* If the directory dot inode is 0, this could be a root directory */
-      else if ((Dir->DotInode != 0) && entryId == 1) {
+        /* If the directory dot inode is 0, this could be a root directory */
         fs_assert_eq(entry->inode - 1, Dir->DotInode);
+      }
+      inodeReader->SetIndex(entryInode);
+
+      if (entryId >= 2) {
+        BlockGroups[group]->AddInodeWithSpecificNumber((CInode*)inodeReader.get(),
+                                                   entryInode);
       }
 
       if (inodeReader->IsFolderInode() && (entryId >= 2)) {
+        inodeReader->Read(*BlockMan.get(), &_Drive);
+
         CFolderInodeReader* subFolder = (CFolderInodeReader*)inodeReader.get();
 
         subFolder->DotInode = Dir->GetIndex();
@@ -250,6 +253,25 @@ void CExt3Fsck::RebuildFolder(CFolderInodeReader* Dir)
     }    
   }
 
+}
+//---------------------------------------------------------------------------
+void CExt3Fsck::RebuildJournalInode()
+{
+  TInode inode;
+
+  uint inodeIdx = EXT2_JOURNAL_INO - 1;
+
+  GetOrReadInodeTable(inodeIdx, inode);
+
+  unique_ptr<CJournalInodeReader>  journalReader(
+                      new CJournalInodeReader(&inode, Params.BlockSize));
+
+  BlockGroups[0]->AddInodeWithSpecificNumber((CInode*)journalReader.get(),
+                                             inodeIdx);
+
+  journalReader->SetIndex(inodeIdx);
+  journalReader->Read(*BlockMan.get(), &_Drive);
+  journalReader->CheckJournalSuperBlock();
 }
 //---------------------------------------------------------------------------
 /*

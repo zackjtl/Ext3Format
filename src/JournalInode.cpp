@@ -79,7 +79,7 @@ void CJournalInode::UpdateInodeTable()
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.SectorCount = div_ceil(_Size, 512);
+  Inode.SectorCount = CalculateSectorCount(_Size);
   Inode.FileFlags = 0;
   Inode.HardLinkCnt = Type == LINUX_S_IFREG ? 1 : 0;
   Inode.OS_Dep1 = 0;

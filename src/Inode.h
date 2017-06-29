@@ -61,12 +61,15 @@ protected:
 	void ValidateIndirectLink(CBlockManager& BlockMan);
 	void ValidateMultilayerLink(CBlockManager& BlockMan, CIndrMatrix& Matrix);
 
+  uint32 CalculateSectorCount(uint32 Size);
+
 public:
 	TInode		Inode;
 	uint32 		Type;  
   uint16    Permissions;
+  
   uint16    _BlockSize;
-	uint32		AddrPerBlock;
+	uint32		_AddrPerBlock;
 
   ////std::string    Permissions;
 

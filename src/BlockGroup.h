@@ -47,6 +47,9 @@ public:
 
   void FlushInodeTables(CBlockManager& BlockMan);
 
+  void ValidateFreeBlockCount();
+  void ValidateFreeInodeCount();
+  
 public:
   TGroupDesc      Desc;
 

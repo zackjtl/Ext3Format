@@ -29,6 +29,8 @@ private:
   void ReadGroupInodeTable(uint32 Group);  
 
   void ReadBlocksToBuffer(uint32 Block, uint32 BlockCount, Bulk<byte>& Buffer);
+
+  void RebuildJournalInode();
   
 private:
   CUsbDrive&    _Drive;

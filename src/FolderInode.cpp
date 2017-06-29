@@ -16,8 +16,8 @@ CFolderInode::CFolderInode(uint16 BlockSize)
     _LastEntryOffset(0),
     _LastEntryBlock(0)
 {
-	DotInode = 0;
-	TwoDotInode = 0;
+	DotInode = EXT2_ROOT_INO - 1;
+	TwoDotInode = EXT2_ROOT_INO - 1;
 }
 
 CFolderInode::~CFolderInode()
@@ -86,7 +86,7 @@ void CFolderInode::Attach(CInode* Inode, CBlockManager& BlockMan,
 {
 	if (Inode->Type == LINUX_S_IFDIR) {
 		CFolderInode* folder = (CFolderInode*)Inode;
-		folder->MkDir(this->GetIndex(), DotInode, BlockMan, Super);
+		folder->MkDir(Inode->GetIndex(), _Index, BlockMan, Super);
 	}
 	ext2_dir_entry  entry;
   uint8 file_type = get_file_type(Inode->Type);
@@ -190,7 +190,7 @@ void CFolderInode::UpdateInodeTable()
   Inode.ModificationTime = Inode.AccessTime;
   Inode.DeleteTime = 0;
   Inode.GroupId = _GroupID;
-  Inode.SectorCount = div_ceil(_Size, 512);
+  Inode.SectorCount = CalculateSectorCount(_Size);
   Inode.FileFlags = 0;
   Inode.HardLinkCnt = _NameList.size();  /* For directory, this is the sub item number */
   Inode.OS_Dep1 = 0;
