@@ -1,8 +1,8 @@
 //---------------------------------------------------------------------------
 #pragma hdrstop
 #include "Ext3fsck.h"
-#include "GlobalDef.h"
-#include "fs_assert.h"
+#include "e3fs_def.h"
+#include "e3fs_assert.h"
 #include "InodeReader.h"
 #include "FolderInodeReader.h"
 #include "JournalInodeReader.h"

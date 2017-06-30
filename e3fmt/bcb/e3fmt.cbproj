@@ -145,31 +145,31 @@
             <BuildOrder>1</BuildOrder>
         </CppCompile>
         <None Include="..\..\inc\BaseError.h">
-            <BuildOrder>44</BuildOrder>
-        </None>
-        <None Include="..\..\inc\BaseTypes.h">
-            <BuildOrder>45</BuildOrder>
-        </None>
-        <None Include="..\..\inc\BitMask.h">
-            <BuildOrder>46</BuildOrder>
-        </None>
-        <None Include="..\..\inc\Bulk.h">
             <BuildOrder>47</BuildOrder>
         </None>
-        <None Include="..\..\inc\fs_assert.h">
-            <BuildOrder>51</BuildOrder>
-        </None>
-        <None Include="..\..\inc\GlobalDef.h">
+        <None Include="..\..\inc\BaseTypes.h">
             <BuildOrder>48</BuildOrder>
         </None>
-        <None Include="..\..\inc\my_uuid.h">
+        <None Include="..\..\inc\BitMask.h">
             <BuildOrder>49</BuildOrder>
         </None>
-        <None Include="..\..\inc\StrUtls.h">
+        <None Include="..\..\inc\Bulk.h">
             <BuildOrder>50</BuildOrder>
         </None>
-        <None Include="..\..\inc\Types.h">
+        <None Include="..\..\inc\e3fs_assert.h">
             <BuildOrder>51</BuildOrder>
+        </None>
+        <None Include="..\..\inc\e3fs_def.h">
+            <BuildOrder>52</BuildOrder>
+        </None>
+        <None Include="..\..\inc\e3fs_uuid.h">
+            <BuildOrder>53</BuildOrder>
+        </None>
+        <None Include="..\..\inc\StrUtls.h">
+            <BuildOrder>54</BuildOrder>
+        </None>
+        <None Include="..\..\inc\Tester.h">
+            <BuildOrder>55</BuildOrder>
         </None>
         <None Include="..\..\src\BaseError.h">
             <BuildOrder>26</BuildOrder>
@@ -186,6 +186,9 @@
             <DependentOn>..\..\src\E2fsBlockIo.h</DependentOn>
             <BuildOrder>55</BuildOrder>
         </CppCompile>
+        <None Include="..\..\src\e3fs_tables.h">
+            <BuildOrder>46</BuildOrder>
+        </None>
         <None Include="..\..\src\error\BaseError.h">
             <BuildOrder>2</BuildOrder>
         </None>
@@ -314,9 +317,6 @@
             <DependentOn>..\..\src\SuperBlockWrapper.h</DependentOn>
             <BuildOrder>42</BuildOrder>
         </CppCompile>
-        <None Include="..\..\src\Tables.h">
-            <BuildOrder>43</BuildOrder>
-        </None>
         <CppCompile Include="..\..\src\tools\BasicTimer.cpp">
             <DependentOn>..\..\src\tools\BasicTimer.h</DependentOn>
             <BuildOrder>21</BuildOrder>

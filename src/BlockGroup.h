@@ -1,7 +1,7 @@
 #ifndef BlockGroupH
 #define BlockGroupH
 
-#include "Tables.h"
+#include "e3fs_tables.h"
 #include "Ext2Params.h"
 #include "BlockManager.h"
 #include "Inode.h"

@@ -4,10 +4,10 @@
 //---------------------------------------------------------------------------
 #include "InodeReader.h"
 #include "FolderInodeReader.h"
-#include "GlobalDef.h"
+#include "e3fs_def.h"
 #include "BaseError.h"
 #include "E2fsBlockIo.h"
-#include "fs_assert.h"
+#include "e3fs_assert.h"
 //---------------------------------------------------------------------------
 CInodeReader* CInodeReader::Create(TInode* Inode, uint16 BlockSize)
 {

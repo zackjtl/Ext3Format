@@ -4,7 +4,7 @@
 #include "BaseError.h"
 #include "BlockGroup.h"
 #include "TypeConv.h"
-#include "GlobalDef.h"
+#include "e3fs_def.h"
 #include <time.h>
 #include <cstring>
 //---------------------------------------------------------------------------

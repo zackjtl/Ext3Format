@@ -5,7 +5,7 @@
  *  This is a wrapper contains a super block structure and can converted to/from data buffer,
  *  deal with multi bytes swap for the endian issue between data stored in the NVM and in the computers.
  */
-#include "Tables.h"
+#include "e3fs_tables.h"
 #include "Bulk.h"
 #include <string>
 

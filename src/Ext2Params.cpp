@@ -1,6 +1,6 @@
 #include "Ext2Params.h"
-#include "Tables.h"
-#include "GlobalDef.h"
+#include "e3fs_tables.h"
+#include "e3fs_def.h"
 
 /*
  *  Total Sectors: The capacity of the storage media.

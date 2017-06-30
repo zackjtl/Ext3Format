@@ -83,16 +83,6 @@ typedef bool	BOOL;
 typedef BOOL BOOLEAN;
 typedef wchar_t WCHAR;
 #endif
-
-typedef union {
-    word ui;
-    byte uc[2];
-} UN_INT;
-
-typedef union {
-    dword ul;
-    byte  uc[4];
-} UN_UL;
 //---------------------------------------------------------------------------
 // For common
 //---------------------------------------------------------------------------

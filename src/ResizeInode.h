@@ -5,7 +5,7 @@
 #include "Inode.h"
 #include "BaseTypes.h"
 #include "Ext2Params.h"
-#include "Tables.h"
+#include "e3fs_tables.h"
 
 class CResizeInode : public CInode
 {

@@ -1,9 +1,9 @@
 #include "Inode.h"
-#include "GlobalDef.h"
+#include "e3fs_def.h"
 #include "BaseError.h"
 #include "FileInode.h"
 #include "FolderInode.h"
-#include "my_uuid.h"
+#include "e3fs_uuid.h"
 #include "TypeConv.h"
 #include <cassert>
 #include <time.h>

@@ -2,7 +2,7 @@
 #pragma hdrstop
 
 #include "TestUUID.h"
-#include "my_uuid.h"
+#include "e3fs_uuid.h"
 #include "BaseError.h"
 #include <iomanip>
 #include <sstream>

@@ -3,7 +3,7 @@
 
 #include "BaseTypes.h"
 #include "BlockManager.h"
-#include "Tables.h"
+#include "e3fs_tables.h"
 #include "Bulk.h"
 #include <vector>
 

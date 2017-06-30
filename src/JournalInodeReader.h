@@ -3,7 +3,7 @@
 #define JournalInodeReaderH
 //---------------------------------------------------------------------------
 #include "InodeReader.h"
-#include "Tables.h"
+#include "e3fs_tables.h"
 
 class CJournalInodeReader : public CInodeReader
 {

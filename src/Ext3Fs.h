@@ -1,7 +1,7 @@
 #ifndef Ext3FsH
 #define Ext3FsH
 
-#include "Tables.h"
+#include "e3fs_tables.h"
 #include "BaseTypes.h"
 #include "Ext2Params.h"
 #include "BlockGroup.h"

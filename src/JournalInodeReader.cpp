@@ -4,8 +4,8 @@
 //---------------------------------------------------------------------------
 #include "JournalInodeReader.h"
 #include "JournalSpWrapper.h"
-#include "GlobalDef.h"
-#include "fs_assert.h"
+#include "e3fs_def.h"
+#include "e3fs_assert.h"
 //---------------------------------------------------------------------------
 CJournalInodeReader::CJournalInodeReader(TInode* InodeIn, uint16 BlockSize)
   : CInodeReader(InodeIn, BlockSize)  

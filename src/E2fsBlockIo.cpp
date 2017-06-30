@@ -3,8 +3,8 @@
 #pragma hdrstop
 //---------------------------------------------------------------------------
 #include "E2fsBlockIo.h"
-#include "fs_assert.h"
-#include "GlobalDef.h"
+#include "e3fs_assert.h"
+#include "e3fs_def.h"
 
 using namespace std;
 //---------------------------------------------------------------------------

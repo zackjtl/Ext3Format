@@ -1,6 +1,6 @@
 #include "BlockManager.h"
 #include "BaseError.h"
-#include "GlobalDef.h"
+#include "e3fs_def.h"
 #include <cstring>
 #include <cassert>
 

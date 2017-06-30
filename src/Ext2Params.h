@@ -2,7 +2,7 @@
 #define Ext2ParamsH
 
 #include "BaseTypes.h"
-#include "Tables.h"
+#include "e3fs_tables.h"
 #include <vector>
 
 using namespace std;

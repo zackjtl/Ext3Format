@@ -1,13 +1,13 @@
 #include "BlockGroup.h"
-#include "Tables.h"
-#include "GlobalDef.h"
+#include "e3fs_tables.h"
+#include "e3fs_def.h"
 #include "BaseError.h"
 #include "Inode.h"
 #include <cassert>
 #include <algorithm>
 #include <cstring>
 #include <stddef.h>
-#include "fs_assert.h"
+#include "e3fs_assert.h"
 
 CBlockGroup::CBlockGroup(uint32 Index, TSuperBlock& Super, CExt2Params& Params, CBlockManager& BlockMan)
   : _GroupId(Index),

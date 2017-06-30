@@ -1,5 +1,5 @@
-#ifndef TablesH
-#define TablesH
+#ifndef e3fs_tablesH
+#define e3fs_tablesH
 
 #include "BaseTypes.h"
 

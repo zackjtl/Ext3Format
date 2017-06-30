@@ -21,7 +21,7 @@
 #include "TestInode.h"
 #include "TestInodeWrite.h"
 #include "TestExt3Fs.h"
-////#include "my_uuid.h"
+////#include "e3fs_uuid.h"
 #include "TestUUID.h"
 
 using namespace std;

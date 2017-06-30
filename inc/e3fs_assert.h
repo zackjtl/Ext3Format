@@ -1,5 +1,5 @@
-#ifndef fs_assertH
-#define fs_assertH
+#ifndef e3fs_assertH
+#define e3fs_assertH
 
 #include "Tester.h"
 

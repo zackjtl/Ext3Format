@@ -2,9 +2,9 @@
 #pragma hdrstop
 #include "JournalInode.h"
 #include "TypeConv.h"
-#include "GlobalDef.h"
+#include "e3fs_def.h"
 #include "JournalSpWrapper.h"
-#include "my_uuid.h"
+#include "e3fs_uuid.h"
 #include <cstring>
 
 //---------------------------------------------------------------------------

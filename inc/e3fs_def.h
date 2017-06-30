@@ -1,5 +1,5 @@
-#ifndef GlobalDefH
-#define GlobalDefH
+#ifndef e3fs_defH
+#define e3fs_defH
 
 #define div_ceil(x, y) (x ? (((x -1) / y) + 1) : 0)
 #define min_of(x, y) (x > y ? y : x)

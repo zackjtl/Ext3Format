@@ -3,8 +3,8 @@
 #pragma hdrstop
 //---------------------------------------------------------------------------
 #include "FolderInodeReader.h"
-#include "Tables.h"
-#include "fs_assert.h"
+#include "e3fs_tables.h"
+#include "e3fs_assert.h"
 //---------------------------------------------------------------------------
 CFolderInodeReader::CFolderInodeReader(TInode* InodeIn, uint16 BlockSize)
   : CInodeReader(InodeIn, BlockSize)

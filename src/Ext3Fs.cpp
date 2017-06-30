@@ -1,8 +1,8 @@
 #include <cmath>
 #include "Ext3Fs.h"
-#include "GlobalDef.h"
-#include "Tables.h"
-#include "my_uuid.h"
+#include "e3fs_def.h"
+#include "e3fs_tables.h"
+#include "e3fs_uuid.h"
 #include "ResizeInode.h"
 #include "JournalInode.h"
 #include "BaseError.h"
